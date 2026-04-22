@@ -40,7 +40,14 @@ dev = [
   "pre-commit",
   "ruff",
   "setuptools-scm",
+]
+docs = [
+  "pydata-sphinx-theme",
   "sphinx",
+  "sphinx_autodoc_typehints",
+  "sphinx_sitemap",
+  "myst_parser[linkify]",
+  "nbsphinx",
 ]
 
 [build-system]
