@@ -47,7 +47,6 @@ docs = [
   "sphinx_autodoc_typehints",
   "sphinx_sitemap",
   "myst_parser[linkify]",
-  "nbsphinx",
 ]
 
 [build-system]
