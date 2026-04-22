@@ -8,7 +8,6 @@
 
 import os
 import sys
-
 from importlib.metadata import version as get_version
 
 # Used when building API docs, put the dependencies
@@ -26,7 +25,7 @@ author = "BrainGlobe devs"
 try:
     full_version = get_version(project)
     # Splitting the release on '+' to remove the commit hash
-    release = full_version.split('+', 1)[0]
+    release = full_version.split("+", 1)[0]
 except LookupError:
     # if git is not initialised, still allow local build
     # with a dummy version
@@ -45,7 +44,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
     "myst_parser",
-    "nbsphinx",
 ]
 
 # Configure the myst parser to enable cool markdown features
@@ -97,8 +95,8 @@ html_theme_options = {
         {
             # Label for this link
             "name": "GitHub",
-            # URL where the link will redirect
-            "url": "https://github.com/brainglobe/brainglobe-data-api-connectivity",  # required
+            # URL where the link will redirect (required)
+            "url": "https://github.com/brainglobe/brainglobe-data-api-connectivity",
             # Icon class (if "type": "fontawesome"),
             # or path to local image (if "type": "local")
             "icon": "fa-brands fa-github",

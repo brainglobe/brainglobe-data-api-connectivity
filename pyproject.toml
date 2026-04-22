@@ -41,6 +41,13 @@ dev = [
   "ruff",
   "setuptools-scm",
 ]
+docs = [
+  "pydata-sphinx-theme",
+  "sphinx",
+  "sphinx_autodoc_typehints",
+  "sphinx_sitemap",
+  "myst_parser[linkify]",
+]
 
 [build-system]
 requires = [
