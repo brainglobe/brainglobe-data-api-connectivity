@@ -6,7 +6,6 @@
    :caption: Contents:
 
    getting_started
-   api_index
 ```
 
 By default the documentation includes the following sections:
