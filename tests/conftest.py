@@ -9,7 +9,7 @@ def _to_module_string(path: str) -> str:
 
 
 pytest_plugins = [
-    _to_module_string(fixture.relative_to(_THIS_DIR.parent).as_posix())
+    _to_module_string(fixture.relative_to(_THIS_DIR).as_posix())
     for fixture in (Path(f"{_THIS_DIR}/fixtures").rglob("*.py"))
     if "__init__" not in str(fixture)
 ]
