@@ -52,7 +52,7 @@ def column_reference_to_index(label):
     return index - 1
 
 
-def get_matrix_from_excel(file, sheet_name, data_range):
+def get_df_from_excel(file, sheet_name, data_range, header=None):
     """Return DataFrame sliced to given row/column ranges."""
     col_range, row_range = get_cell_range(data_range)
 
@@ -71,20 +71,14 @@ def get_matrix_from_excel(file, sheet_name, data_range):
         skiprows=skiprows,
         nrows=nrows,
         usecols=usecols,
-        header=None,
+        header=header,
     )
-
-    if df.shape[0] != df.shape[1]:
-        raise ValueError(
-            "Matrix should have equal number of rows and columns."
-        )
-
     return df
 
 
 def check_ids(file_path, sheet_name, data_range, row_with_ids, col_with_ids):
     """Specific to this dataset, checks that row and col ids match and that
-    they are a range from 0 to n - 1."""
+    they are a range from 1 to n."""
     row_ids = get_row_ids(file_path, sheet_name, data_range, row_with_ids)
     col_ids = get_col_ids(file_path, sheet_name, data_range, col_with_ids)
     if row_ids != col_ids:
@@ -95,7 +89,7 @@ def check_ids(file_path, sheet_name, data_range, row_with_ids, col_with_ids):
         raise ValueError(
             f"Row IDs {row_ids} do not match expected {expected_ids}."
         )
-    return row_ids
+    return row_ids, col_ids
 
 
 def validate_matrix(df, row_ids, col_ids):
@@ -141,28 +135,80 @@ def get_col_ids(file, sheet, data_range, row_num):
     )
 
 
+def rename_columns(columns):
+    return (
+        columns.str.lower()
+        .str.replace(" ", "_")
+        .str.replace("\n", "_")
+        .str.replace(".", "")
+        .str.replace("#", "")
+    )
+
+
+def consolidate_info_files(data_folder):
+    """Load all info files and check whether they are the same.
+    Remove duplicates and rename the first one to simply info.csv."""
+
+    info_path = os.path.join(data_folder, "info.csv")
+    if os.path.exists(info_path):
+        os.remove(info_path)
+
+    info_files = [f for f in os.listdir(data_folder) if f.endswith("info.csv")]
+    for i in range(len(info_files)):
+        for j in range(i + 1, len(info_files)):
+            info_i = pd.read_csv(os.path.join(data_folder, info_files[i]))
+            info_j = pd.read_csv(os.path.join(data_folder, info_files[j]))
+            if not info_i.equals(info_j):
+                raise ValueError(
+                    "Info files {0} and {1} do not match.".format(
+                        info_files[i], info_files[j]
+                    )
+                )
+
+    os.rename(
+        os.path.join(data_folder, info_files[0]),
+        os.path.join(data_folder, "info.csv"),
+    )
+
+    for f in info_files:
+        if f != info_files[0]:
+            os.remove(os.path.join(data_folder, f))
+
+
 if __name__ == "__main__":
     data_folder = "data"
     matrices = "swansonDatasetS3 CNS data matrices JHr1.xlsx"
     matrix_sheets = [f"CNS2{sex} modules (raw)" for sex in ["m", "f"]]
-    upper_left = "T8"
-    lower_right = "AFU841"
-    data_range = (upper_left, lower_right)
+    data_range = ("T8", "AFU841")
+    info_range = ("A7", "S841")
+
     file_path = os.path.join(data_folder, matrices)
 
     for sheet in matrix_sheets:
         if sheet not in pd.ExcelFile(file_path).sheet_names:
             raise ValueError(f"Sheet {sheet} not found in {file_path}.")
-        m = get_matrix_from_excel(
+        m = get_df_from_excel(
             file_path, sheet_name=sheet, data_range=data_range
         )
+        row_ids, col_ids = check_ids(file_path, sheet, data_range, "P", 5)
+        validate_matrix(m, row_ids, col_ids)
 
-        check_ids(file_path, sheet, data_range, "P", 5)
-
-        csv_filename = sheet.replace(" ", "_") + ".csv"
+        info = get_df_from_excel(
+            file_path, sheet_name=sheet, data_range=info_range, header=0
+        )
+        info.rename(columns={info.columns[0]: "Side"}, inplace=True)
+        info.columns = rename_columns(info.columns)
 
         m.to_csv(
-            os.path.join(data_folder, csv_filename), index=False, header=False
+            os.path.join(data_folder, sheet.replace(" ", "_") + "_matrix.csv"),
+            index=False,
+            header=False,
         )
+        info.to_csv(
+            os.path.join(data_folder, sheet.replace(" ", "_") + "_info.csv"),
+            index=False,
+        )
+
+    consolidate_info_files(data_folder)
 
     pass
