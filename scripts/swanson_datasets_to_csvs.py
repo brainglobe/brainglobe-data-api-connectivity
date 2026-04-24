@@ -1,4 +1,6 @@
 import os
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -184,6 +186,43 @@ def convert_matrix_to_edge_table(m: pd.DataFrame):
     return edge_table
 
 
+def lookup_node_index(
+    region_info: dict[str, Any],
+    node_info: pd.DataFrame,
+    region_to_node_heading: dict[str, str],
+    morph_value: dict[str, Callable],
+):
+
+    possible_matches = node_info
+
+    for region_heading, value in region_info.items():
+        if region_heading in morph_value:
+            conversion_function = morph_value[region_heading]
+            value = conversion_function(value)
+        if region_heading in region_to_node_heading:
+            node_heading = region_to_node_heading[region_heading]
+        else:
+            node_heading = region_heading
+
+        possible_matches = possible_matches[
+            possible_matches[node_heading] == value
+        ]
+
+    if possible_matches.shape[0] == 1:
+        return possible_matches.index[0]
+    else:
+        raise ValueError(
+            f"Found {possible_matches.shape[0]} matches, expected 1."
+        )
+
+
+morph_dict = {"one": 1, "two": 2}
+
+
+def _morph(region_side):
+    return morph_dict[region_side]
+
+
 if __name__ == "__main__":
     data_folder = "data"
     matrices = "swansonDatasetS3 CNS data matrices JHr1.xlsx"
@@ -216,6 +255,14 @@ if __name__ == "__main__":
         )
         info.rename(columns={info.columns[0]: "Side"}, inplace=True)
         info.columns = rename_columns(info.columns)
+
+        region_info = {"region_side": "one", "region_abbr": "STN"}
+        region_to_node_heading = {"region_side": "side", "region_abbr": "abbr"}
+        morph_value = {"region_side": _morph}
+
+        idx = lookup_node_index(
+            region_info, info, region_to_node_heading, morph_value
+        )
 
         np.savetxt(
             os.path.join(
