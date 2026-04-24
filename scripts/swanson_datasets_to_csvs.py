@@ -5,6 +5,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from brainglobe_data_api_connectivity.preprocess.validate_data import (
+    validate_matrix,
+)
+
 
 def get_cell_range(
     cell_range: tuple[str, str],
@@ -93,16 +97,6 @@ def check_ids(file_path, sheet_name, data_range, row_with_ids, col_with_ids):
             f"Row IDs {row_ids} do not match expected {expected_ids}."
         )
     return row_ids, col_ids
-
-
-def validate_matrix(df, row_ids, col_ids):
-    expected_rows = len(row_ids)
-    expected_cols = len(col_ids)
-    if df.shape != (expected_rows, expected_cols):
-        raise ValueError(
-            f"Matrix shape {df.shape} does not match expected "
-            f"({expected_rows}, {expected_cols})."
-        )
 
 
 def get_row_ids(file, sheet, data_range, col_label):
