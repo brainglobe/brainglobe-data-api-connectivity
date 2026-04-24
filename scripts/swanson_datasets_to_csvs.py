@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 
@@ -175,10 +176,18 @@ def consolidate_info_files(data_folder):
             os.remove(os.path.join(data_folder, f))
 
 
+def convert_matrix_to_edge_table(m: pd.DataFrame):
+    adjacency_matrix = m.to_numpy()
+    connections = adjacency_matrix.nonzero()
+    weights = adjacency_matrix[connections]
+    edge_table = np.column_stack(connections + (weights,))
+    return edge_table
+
+
 if __name__ == "__main__":
     data_folder = "data"
     matrices = "swansonDatasetS3 CNS data matrices JHr1.xlsx"
-    matrix_sheets = [f"CNS2{sex} modules (raw)" for sex in ["m", "f"]]
+    matrix_sheets = [f"CNS2{sex} modules" for sex in ["m", "f"]]
     data_range = ("T8", "AFU841")
     info_range = ("A7", "S841")
 
@@ -187,17 +196,20 @@ if __name__ == "__main__":
     metadata = "swansonDatasetS2 CNS CRs JHr1.xlsx"
     metadata_file = os.path.join(data_folder, metadata)
 
-    df = pd.read_excel(metadata_file)
-    df.to_csv(os.path.join(data_folder, "edge_metadata.csv"), index=False)
+    # df = pd.read_excel(metadata_file)
+    # df.to_csv(os.path.join(data_folder, "edge_metadata.csv"), index=False)
 
     for sheet in matrix_sheets:
         if sheet not in pd.ExcelFile(file_path).sheet_names:
             raise ValueError(f"Sheet {sheet} not found in {file_path}.")
-        m = get_df_from_excel(
+        matrix = get_df_from_excel(
             file_path, sheet_name=sheet, data_range=data_range
         )
         row_ids, col_ids = check_ids(file_path, sheet, data_range, "P", 5)
-        validate_matrix(m, row_ids, col_ids)
+        validate_matrix(matrix, row_ids, col_ids)
+
+        # convert m to edge table
+        edge_table = convert_matrix_to_edge_table(matrix)
 
         info = get_df_from_excel(
             file_path, sheet_name=sheet, data_range=info_range, header=0
@@ -205,11 +217,15 @@ if __name__ == "__main__":
         info.rename(columns={info.columns[0]: "Side"}, inplace=True)
         info.columns = rename_columns(info.columns)
 
-        m.to_csv(
-            os.path.join(data_folder, sheet.replace(" ", "_") + "_matrix.csv"),
-            index=False,
-            header=False,
+        np.savetxt(
+            os.path.join(
+                data_folder, sheet.replace(" ", "_") + "_edge_table.csv"
+            ),
+            edge_table,
+            fmt="%d",
+            delimiter=",",
         )
+
         info.to_csv(
             os.path.join(data_folder, sheet.replace(" ", "_") + "_info.csv"),
             index=False,
