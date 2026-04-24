@@ -20,6 +20,18 @@ from brainglobe_data_api_connectivity.preprocess.validate_data import (
         ),
         pytest.param(
             np.zeros((4, 4)),
+            [
+                0,
+                1,
+                2,
+                3,
+            ],
+            [5, 6, 7, 100],
+            None,
+            id="valid (col_ids!=row_ids)",
+        ),
+        pytest.param(
+            np.zeros((4, 4)),
             range(0, 4),
             range(0, 5),
             ValueError("expected same number of rows and columns"),
