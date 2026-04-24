@@ -9,42 +9,34 @@ from brainglobe_data_api_connectivity.preprocess.validate_data import (
 
 
 @pytest.mark.parametrize(
-    "kwargs",
+    "matrix,row_ids,col_ids,error",
     [
         pytest.param(
-            {
-                "matrix": np.zeros((4, 4)),
-                "row_ids": range(0, 4),
-                "col_ids": range(0, 4),
-            }
-        )
-    ],
-)
-def test_validate_matrix(kwargs):
-    validate_matrix(**kwargs)
-
-
-@pytest.mark.parametrize(
-    "kwargs,error_message",
-    [
-        pytest.param(
-            {
-                "matrix": np.zeros((4, 4)),
-                "row_ids": range(0, 4),
-                "col_ids": range(0, 5),
-            },
-            "expected same number of rows and columns",
+            np.zeros((4, 4)),
+            range(0, 4),
+            range(0, 4),
+            None,
+            id="valid",
         ),
         pytest.param(
-            {
-                "matrix": np.zeros((4, 4)),
-                "row_ids": range(0, 5),
-                "col_ids": range(0, 5),
-            },
-            "Matrix shape (4, 4) does not match expected (5, 5).",
+            np.zeros((4, 4)),
+            range(0, 4),
+            range(0, 5),
+            ValueError("expected same number of rows and columns"),
+            id="n_cols!=n_rows",
+        ),
+        pytest.param(
+            np.zeros((4, 4)),
+            range(0, 5),
+            range(0, 5),
+            ValueError("Matrix shape (4, 4) does not match expected (5, 5)."),
+            id="matrix shape does not match expectations",
         ),
     ],
 )
-def test_validate_matrix_value_error(kwargs, error_message):
-    with pytest.raises(ValueError, match=re.escape(error_message)):
-        validate_matrix(**kwargs)
+def test_validate_matrix_value(matrix, row_ids, col_ids, error):
+    if error is None:
+        validate_matrix(matrix, row_ids, col_ids)
+    else:
+        with pytest.raises(type(error), match=re.escape(str(error))):
+            validate_matrix(matrix, row_ids, col_ids)
