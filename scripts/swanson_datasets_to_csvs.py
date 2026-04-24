@@ -149,7 +149,7 @@ def consolidate_info_files(data_folder):
     """Load all info files and check whether they are the same.
     Remove duplicates and rename the first one to simply info.csv."""
 
-    info_path = os.path.join(data_folder, "info.csv")
+    info_path = os.path.join(data_folder, "node_info.csv")
     if os.path.exists(info_path):
         os.remove(info_path)
 
@@ -167,7 +167,7 @@ def consolidate_info_files(data_folder):
 
     os.rename(
         os.path.join(data_folder, info_files[0]),
-        os.path.join(data_folder, "info.csv"),
+        os.path.join(data_folder, "node_info.csv"),
     )
 
     for f in info_files:
@@ -183,6 +183,12 @@ if __name__ == "__main__":
     info_range = ("A7", "S841")
 
     file_path = os.path.join(data_folder, matrices)
+
+    metadata = "swansonDatasetS2 CNS CRs JHr1.xlsx"
+    metadata_file = os.path.join(data_folder, metadata)
+
+    df = pd.read_excel(metadata_file)
+    df.to_csv(os.path.join(data_folder, "edge_metadata.csv"), index=False)
 
     for sheet in matrix_sheets:
         if sheet not in pd.ExcelFile(file_path).sheet_names:
