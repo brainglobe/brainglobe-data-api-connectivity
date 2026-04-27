@@ -1,6 +1,5 @@
 import csv
 from pathlib import Path
-from typing import NamedTuple
 
 import pandas as pd
 from rustworkx import PyDiGraph
@@ -52,18 +51,6 @@ class Connections:
             edge_meta=edge_meta,
             **constructor_kwargs,
         )
-
-    @property
-    def node_class(self) -> type[NamedTuple]:
-        """Returns the class of this network's nodes."""
-        return self.network.get_node_data(0).__class__
-
-    @property
-    def node_fields(self) -> tuple[str]:
-        """Return the names of the metadata fields for nodes stored in this
-        network.
-        """
-        return self.network.get_node_data(0)._fields
 
     def __init__(
         self,
