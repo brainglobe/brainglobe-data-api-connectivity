@@ -123,7 +123,14 @@ class Connections:
         # but better safe than sorry
         self.nodes = nodes
         _internal_node_indexes = self.network.add_nodes_from(self.nodes.index)
-        self.nodes.index.map(lambda x: _internal_node_indexes[x])
+        # self.nodes.index.map(lambda x: _internal_node_indexes[x])
+        self.nodes.rename(
+            index={
+                old_index: _internal_node_indexes[i]
+                for i, old_index in enumerate(self.nodes.index)
+            },
+            inplace=True,
+        )
 
         self.network.add_edges_from(
             [
