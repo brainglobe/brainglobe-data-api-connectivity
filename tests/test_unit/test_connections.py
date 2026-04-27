@@ -22,19 +22,14 @@ def test_me(
 
 
 def test_setup_network_nodes_reindexed(
-    DATA_DIR, nodes="small-nodes.csv", edge_table="small-edge-table.csv"
+    DATA_DIR,
+    read_edge_table,
+    nodes="small-nodes.csv",
+    edge_table="small-edge-table.csv",
 ) -> None:
     """"""
     nodes = pd.read_csv(DATA_DIR / nodes, delimiter=",")
-    edge_table = tuple(
-        t
-        for t in pd.read_csv(
-            DATA_DIR / edge_table, delimiter=",", header=None
-        ).itertuples(
-            index=False,
-            name=None,
-        )
-    )
+    edge_table = read_edge_table(DATA_DIR / edge_table)
 
     nodes_before = pd.DataFrame(nodes)
 
