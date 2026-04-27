@@ -85,8 +85,9 @@ def test_connections_construction(
 
         assert old_weight == new_weight
 
-    assert (meta_after is None) == (meta_before is None)
-    if meta_before is not None:
+    if meta_before is None:
+        assert meta_after is None
+    else:
         assert meta_after is not None
         # Any edge metadata should have updated consistently, too.
 
