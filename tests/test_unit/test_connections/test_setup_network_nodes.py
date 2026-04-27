@@ -1,11 +1,20 @@
 import pandas as pd
+import pytest
 
 from brainglobe_data_api_connectivity.connections import Connections
 
 
-def test_setup_network_nodes_reindexed(
+@pytest.mark.parametrize(
+    "reindex",
+    [
+        pytest.param(True, id="Reindexing case"),
+        pytest.param(False, id="Identity (no) reindex-ing"),
+    ],
+)
+def test_setup_network_nodes(
     DATA_DIR,
     read_edge_table,
+    reindex: bool,
     nodes="small-nodes.csv",
     edge_table="small-edge-table.csv",
 ) -> None:
@@ -13,10 +22,11 @@ def test_setup_network_nodes_reindexed(
     index identifiers, re-indexing via the network setup is handled correctly.
     """
     nodes = pd.read_csv(DATA_DIR / nodes, delimiter=",")
-    # Introduce a non-standard indexing of the input nodes,
-    # reflecting that we are not using the row-number as the
-    # index.
-    nodes.index = reversed(nodes.index)
+    if reindex:
+        # Introduce a non-standard indexing of the input nodes,
+        # reflecting that we are not using the row-number as the
+        # index.
+        nodes.index = reversed(nodes.index)
 
     edge_table = read_edge_table(DATA_DIR / edge_table)
     nodes_before = pd.DataFrame(nodes)
@@ -26,6 +36,8 @@ def test_setup_network_nodes_reindexed(
 
     # Don't drop any nodes
     assert nodes_after.shape == nodes_before.shape
+    if not reindex:
+        assert (nodes_before.index == nodes_after.index).all()
 
     # Node mapping has taken place appropriately.
     # Indexes may have swapped, but information has been kept
