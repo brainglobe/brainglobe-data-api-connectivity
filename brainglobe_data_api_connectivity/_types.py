@@ -1,3 +1,3 @@
-from typing import Any, Iterable, TypeAlias
+from typing import Any, Collection, TypeAlias
 
-EdgeTable: TypeAlias = Iterable[tuple[int, int, Any]]
+EdgeTable: TypeAlias = Collection[tuple[int, int, Any]]

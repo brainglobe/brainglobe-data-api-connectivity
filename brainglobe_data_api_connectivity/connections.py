@@ -3,6 +3,7 @@ from collections import namedtuple
 from pathlib import Path
 from typing import NamedTuple
 
+import pandas as pd
 from rustworkx import PyDiGraph
 
 from ._types import EdgeTable
@@ -16,36 +17,50 @@ class Connections:
     ergo, we shall have an attribute instead.
     """
 
-    _nodes: tuple[NamedTuple]
+    edge_info: pd.DataFrame | None
     network: PyDiGraph
 
     @classmethod
     def from_files(
         cls,
         nodes: Path,
-        connections: Path,
+        edge_table: Path,
+        edge_meta: Path | None = None,
+        **constructor_kwargs,
     ) -> "Connections":
         """"""
-        # Predict number of edges and nodes that the graph will have
         with nodes.open("r") as node_file:
             node_reader = csv.reader(node_file, delimiter=",")
 
+            # TO CONSIDER: Possibly better for us to just use node
+            # indexes, and use something like a dataframe to allow access
+            # to information?
+
             # Create Node object with metadata by reading header information
-            Node = namedtuple("Node", next(node_reader))
+            header_row = next(node_reader)
+            Node = namedtuple("Node", header_row)
 
             # Create Node objects themselves
             node_collection = tuple(Node(*row) for row in node_reader)
 
-        with connections.open("r") as edge_file:
+        with edge_table.open("r") as edge_file:
             edge_reader = csv.reader(edge_file, delimiter=",")
 
-            # Currently no filter on weight 0, so will add an edge
-            edge_table: EdgeTable = tuple(
+            # Currently no filter on weight 0, so will add an edge!
+            edge_table_entries = tuple(
                 (int(row[0]), int(row[1]), float(row[2]))
                 for row in edge_reader
             )
 
-        return cls(edge_table=edge_table, nodes=node_collection)
+        if edge_meta is not None:
+            edge_meta = pd.read_csv(edge_meta, delimiter=",")
+
+        return cls(
+            edge_table=edge_table_entries,
+            nodes=node_collection,
+            edge_meta=edge_meta,
+            **constructor_kwargs,
+        )
 
     @property
     def node_class(self) -> type[NamedTuple]:
@@ -63,15 +78,18 @@ class Connections:
         self,
         edge_table: EdgeTable,
         nodes: tuple[NamedTuple],
-        name: str = "connections",
+        edge_meta: pd.DataFrame | None = None,
+        *,
+        edge_meta_node_from_col: str = "from",
+        edge_meta_node_to_col: str = "to",
     ):
         self.network = PyDiGraph(
             check_cycle=False,
             multigraph=False,
-            attrs={"name": name},
             node_count_hint=len(nodes),
             edge_count_hint=len(edge_table),
         )
+
         # Fairly sure this should always be sequential integers...
         # but better safe than sorry
         _internal_node_indexes = self.network.add_nodes_from(nodes)
@@ -85,10 +103,26 @@ class Connections:
                 for row in edge_table
             ]
         )
-        # If we are storing information about non-connections (or connections
-        # in general), we also need to do the same sanitisation with
-        # _internal_node_indexes on that info too
 
-    def __getattr__(self, name: str):
-        """Fallback fast-access of graph attributes."""
-        return self.network.attrs.get(name)
+        # If we are also storing edge metadata, we need to update the
+        # "from" and "to" node reference columns to the internal node
+        # indexes as well.
+        if edge_meta is not None:
+            if edge_meta_node_from_col == edge_meta_node_to_col:
+                raise ValueError(
+                    "Connection metadata 'from' and 'to' columns are the same!"
+                )
+
+            edge_meta[edge_meta_node_from_col].map(
+                lambda x: _internal_node_indexes[x]
+            )
+            edge_meta[edge_meta_node_to_col].map(
+                lambda x: _internal_node_indexes[x]
+            )
+
+            edge_meta.set_index(
+                [edge_meta_node_from_col, edge_meta_node_to_col],
+                drop=True,
+                inplace=True,
+            )
+        self.edge_info = edge_meta
