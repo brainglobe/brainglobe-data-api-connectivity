@@ -58,9 +58,38 @@ class Connections:
         nodes: pd.DataFrame,
         edge_meta: pd.DataFrame | None = None,
         *,
-        edge_meta_node_from_col: str = "from",
-        edge_meta_node_to_col: str = "to",
+        edge_meta_from_col: str = "from",
+        edge_meta_to_col: str = "to",
     ):
+        self._setup_network(nodes, edge_table)
+
+        self._setup_edge_metadata(
+            edge_meta, edge_meta_from_col, edge_meta_to_col
+        )
+
+    def _setup_network(
+        self,
+        nodes: pd.DataFrame,
+        edge_table: EdgeTable,
+    ) -> None:
+        """Creates the underlying network representation of the connections.
+
+        Sets up the `network` attribute by initialising the underlying graph
+        object, and adding the nodes and edges that belong to the graph to this
+        object.
+
+        The `nodes` attribute is also set during this method. This is a table
+        where table index `i` contains any information about the node with
+        index `i` in the underlying network object.
+
+        Note that the underlying network object chooses its own internal
+        indexing for the nodes (and thus edges). To ensure consistency, we
+        first create the nodes in the graph from the index of the table
+        provided, then swap out this indexing method for the indexes assigned
+        to each node by the graph.
+
+        At the end of this method, `self.network` and `self.nodes` are set.
+        """
         self.network = PyDiGraph(
             check_cycle=False,
             multigraph=False,
@@ -85,23 +114,40 @@ class Connections:
             ]
         )
 
-        # If we are also storing edge metadata, we need to update the
-        # "from" and "to" node reference columns to the internal node
-        # indexes as well.
-        if edge_meta is not None:
-            if edge_meta_node_from_col == edge_meta_node_to_col:
+    def _setup_edge_metadata(
+        self,
+        edge_meta: pd.DataFrame | None,
+        from_column: str,
+        to_column: str,
+    ) -> None:
+        """Setup storage for edge (connection) metadata.
+
+        Edge metadata is stored as a `DataFrame`. Rows are indexed using a
+        `MultiIndex` of the form `(i, j)` to represent the edge from `i` to
+        `j`. This allows lookup of connection information via the `.loc[i, j]`.
+
+        Note that edge metadata is optional, and the corresponding attribute is
+        set to `None` if no such information is provided.
+
+        At the end of this method, `self.edge_info` is set.
+        """
+        self.edge_info = edge_meta
+
+        if self.edge_info is not None:
+            if from_column == to_column:
                 raise ValueError(
-                    "Connection metadata 'from' and 'to' columns are the same!"
+                    "Connection metadata 'from' and 'to' columns are the same "
+                    f"({from_column})."
                 )
 
-            edge_meta[edge_meta_node_from_col].map(
-                lambda x: self.nodes.index[x]
-            )
-            edge_meta[edge_meta_node_to_col].map(lambda x: self.nodes.index[x])
+            # If we are also storing edge metadata, we need to update the
+            # "from" and "to" node reference columns to use the internal node
+            # indexes as well.
+            self.edge_info[from_column].map(lambda x: self.nodes.index[x])
+            self.edge_info[to_column].map(lambda x: self.nodes.index[x])
 
-            edge_meta.set_index(
-                [edge_meta_node_from_col, edge_meta_node_to_col],
+            self.edge_info.set_index(
+                [from_column, to_column],
                 drop=True,
                 inplace=True,
             )
-        self.edge_info = edge_meta
