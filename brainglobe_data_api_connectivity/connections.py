@@ -61,6 +61,28 @@ class Connections:
         edge_meta_from_col: str = "from",
         edge_meta_to_col: str = "to",
     ):
+        """Create a new set of connections.
+
+        Args:
+            edge_table: EdgeTable
+                Edge-table representation of the node connections; a container
+                    of `[from, to, weight]` values.
+            nodes: pd.DataFrame
+                DataFrame containing information about the nodes. The index
+                    will be overwritten by the internal indexes used for the
+                    nodes by the internal network representation.
+            edge_meta: pd.DataFrame
+                DataFrame containing information about connections. Two columns
+                    must be present that contain the index of the node "from"
+                    which the edge leaves and "to" which the edge connects. All
+                    other columns are assumed to contain data.
+            edge_meta_from_col: str
+                Header of the column in the `edge_meta` argument containing the
+                    "from" node indexes.
+            edge_meta_to_col: str
+                Header of the column in the `edge_meta` argument containing the
+                    "to" node indexes.
+        """
         self._setup_network(nodes, edge_table)
 
         self._setup_edge_metadata(
