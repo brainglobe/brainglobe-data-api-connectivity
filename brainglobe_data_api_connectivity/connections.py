@@ -1,5 +1,4 @@
 import csv
-from collections import namedtuple
 from pathlib import Path
 from typing import NamedTuple
 
@@ -19,6 +18,7 @@ class Connections:
 
     edge_info: pd.DataFrame | None
     network: PyDiGraph
+    nodes: pd.DataFrame
 
     @classmethod
     def from_files(
@@ -26,22 +26,13 @@ class Connections:
         nodes: Path,
         edge_table: Path,
         edge_meta: Path | None = None,
+        node_index_column: str | None = None,
         **constructor_kwargs,
     ) -> "Connections":
         """"""
-        with nodes.open("r") as node_file:
-            node_reader = csv.reader(node_file, delimiter=",")
-
-            # TO CONSIDER: Possibly better for us to just use node
-            # indexes, and use something like a dataframe to allow access
-            # to information?
-
-            # Create Node object with metadata by reading header information
-            header_row = next(node_reader)
-            Node = namedtuple("Node", header_row)
-
-            # Create Node objects themselves
-            node_collection = tuple(Node(*row) for row in node_reader)
+        node_collection = pd.read_csv(
+            nodes, delimiter=",", index_col=node_index_column
+        )
 
         with edge_table.open("r") as edge_file:
             edge_reader = csv.reader(edge_file, delimiter=",")
@@ -77,7 +68,7 @@ class Connections:
     def __init__(
         self,
         edge_table: EdgeTable,
-        nodes: tuple[NamedTuple],
+        nodes: pd.DataFrame,
         edge_meta: pd.DataFrame | None = None,
         *,
         edge_meta_node_from_col: str = "from",
@@ -92,12 +83,15 @@ class Connections:
 
         # Fairly sure this should always be sequential integers...
         # but better safe than sorry
-        _internal_node_indexes = self.network.add_nodes_from(nodes)
+        self.nodes = nodes
+        _internal_node_indexes = self.network.add_nodes_from(self.nodes.index)
+        self.nodes.index.map(lambda x: _internal_node_indexes[x])
+
         self.network.add_edges_from(
             [
                 (
-                    _internal_node_indexes[row[0]],
-                    _internal_node_indexes[row[1]],
+                    self.nodes.index[row[0]],
+                    self.nodes.index[row[1]],
                     row[2],
                 )
                 for row in edge_table
@@ -114,11 +108,9 @@ class Connections:
                 )
 
             edge_meta[edge_meta_node_from_col].map(
-                lambda x: _internal_node_indexes[x]
+                lambda x: self.nodes.index[x]
             )
-            edge_meta[edge_meta_node_to_col].map(
-                lambda x: _internal_node_indexes[x]
-            )
+            edge_meta[edge_meta_node_to_col].map(lambda x: self.nodes.index[x])
 
             edge_meta.set_index(
                 [edge_meta_node_from_col, edge_meta_node_to_col],
