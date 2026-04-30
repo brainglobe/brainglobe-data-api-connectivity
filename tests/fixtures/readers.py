@@ -14,6 +14,9 @@ def read_edge_table() -> Callable[[Path], EdgeTable]:
     """
 
     def _inner(path: Path) -> EdgeTable:
-        return tuple(t for t in pl.read_csv(path).iter_rows())
+        return tuple(
+            t
+            for t in pl.read_csv(path, has_header=False).iter_rows(named=False)
+        )
 
     return _inner

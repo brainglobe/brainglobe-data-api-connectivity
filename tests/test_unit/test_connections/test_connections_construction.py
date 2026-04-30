@@ -5,6 +5,13 @@ from brainglobe_data_api_connectivity.connections import Connections
 
 
 @pytest.mark.parametrize(
+    "from_files",
+    [
+        pytest.param(True, id="From files"),
+        pytest.param(False, id="Direct construction"),
+    ],
+)
+@pytest.mark.parametrize(
     ("edge_metadata", "kwargs"),
     [
         pytest.param(None, {}, id="No metadata"),
@@ -21,24 +28,34 @@ def test_connections_construction(
     read_edge_table,
     edge_metadata: str | None,
     kwargs: dict[str, str],
+    from_files: bool,
     nodes="small-nodes.csv",
     edge_table="small-edge-table.csv",
 ) -> None:
     """Tests that, if nodes are provided using a different convention to row
     index identifiers, re-indexing via the network setup is handled correctly.
     """
-    nodes = pl.read_csv(DATA_DIR / nodes)
-    edge_table = read_edge_table(DATA_DIR / edge_table)
+    _node_file = DATA_DIR / nodes
+    _edge_file = DATA_DIR / edge_table
+    _edge_meta_file = DATA_DIR / edge_metadata if edge_metadata else None
+
+    nodes = pl.read_csv(_node_file)
+    edge_table = read_edge_table(_edge_file)
 
     meta_before: None | pl.DataFrame
     if edge_metadata is not None:
-        edge_metadata = pl.read_csv(DATA_DIR / edge_metadata)
+        edge_metadata = pl.read_csv(_edge_meta_file)
         meta_before = pl.DataFrame(edge_metadata)
     else:
         meta_before = None
     nodes_before = pl.DataFrame(nodes)
 
-    G = Connections(edge_table, nodes, edge_metadata, **kwargs)
+    if from_files:
+        G = Connections.from_files(
+            _node_file, _edge_file, _edge_meta_file, **kwargs
+        )
+    else:
+        G = Connections(edge_table, nodes, edge_metadata, **kwargs)
 
     nodes_after = G.nodes
     meta_after = G.edge_info

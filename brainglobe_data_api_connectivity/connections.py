@@ -1,7 +1,5 @@
-import csv
 from pathlib import Path
 
-import pandas as pd
 import polars as pl
 from rustworkx import PyDiGraph
 
@@ -18,7 +16,7 @@ class Connections:
 
     _edge_meta_index_col: str = "graph_edge"
 
-    edge_info: pd.DataFrame | None
+    edge_info: pl.DataFrame | None
     network: PyDiGraph
     nodes: pl.DataFrame
 
@@ -66,21 +64,14 @@ class Connections:
         Returns:
             connections: `Connections` instance created from file information.
         """
-        node_collection = pd.read_csv(
-            nodes, delimiter=",", index_col=node_index_column
+        node_collection = pl.read_csv(nodes)
+
+        edge_table_entries = list(
+            pl.read_csv(edge_table, has_header=False).iter_rows(named=False)
         )
 
-        with edge_table.open("r") as edge_file:
-            edge_reader = csv.reader(edge_file, delimiter=",")
-
-            # Currently no filter on weight 0, so will add an edge!
-            edge_table_entries = tuple(
-                (int(row[0]), int(row[1]), float(row[2]))
-                for row in edge_reader
-            )
-
         if edge_meta is not None:
-            edge_meta = pd.read_csv(edge_meta, delimiter=",")
+            edge_meta = pl.read_csv(edge_meta)
 
         return cls(
             edge_table=edge_table_entries,
@@ -92,8 +83,8 @@ class Connections:
     def __init__(
         self,
         edge_table: EdgeTable,
-        nodes: pd.DataFrame,
-        edge_meta: pd.DataFrame | None = None,
+        nodes: pl.DataFrame,
+        edge_meta: pl.DataFrame | None = None,
         *,
         edge_meta_from_col: str = "from",
         edge_meta_to_col: str = "to",
