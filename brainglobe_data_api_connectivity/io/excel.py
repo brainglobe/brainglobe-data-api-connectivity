@@ -73,7 +73,7 @@ def get_row_ids(
     sheet: str,
     data_range: tuple[str, str],
     col_label: str,
-):
+) -> list[int]:
     (_, _), (r0, r1) = get_cell_range(data_range)
     col = column_reference_to_index(col_label)
     return (
@@ -92,7 +92,7 @@ def get_row_ids(
 
 def get_col_ids(
     file: Path, sheet: str, data_range: tuple[str, str], row_num: int
-):
+) -> list[int]:
     (c0, c1), (_, _) = get_cell_range(data_range)
     return (
         pd.read_excel(
