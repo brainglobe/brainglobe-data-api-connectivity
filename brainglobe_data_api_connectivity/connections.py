@@ -185,7 +185,7 @@ class Connections:
 
             self.edge_info = edge_meta.with_columns(
                 edge_meta.select(
-                    pl.concat_list(from_column, to_column).alias(
+                    pl.concat_arr(from_column, to_column).alias(
                         self._edge_meta_index_col
                     )
                 )
