@@ -148,7 +148,7 @@ class Connections:
 
         # Internal node indexes should just be the range from 0 -> n_nodes-1,
         # since rustworkx graphs assign sequential indexes to given nodes.
-        _ = self.network.add_nodes_from(range(n_nodes))
+        self.network.add_nodes_from(range(n_nodes))
 
         self.nodes = nodes
         self.network.add_edges_from(edge_table)
