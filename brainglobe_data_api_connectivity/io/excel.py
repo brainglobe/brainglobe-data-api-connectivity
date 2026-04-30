@@ -1,0 +1,95 @@
+"""Excel-related helpers."""
+
+from typing import Tuple
+
+import pandas as pd
+
+
+def get_df_from_excel(file, sheet_name, data_range, header=None):
+    """Return DataFrame sliced to given row/column ranges."""
+    col_range, row_range = get_cell_range(data_range)
+
+    start_row, end_row = row_range
+    start_col, end_col = col_range
+
+    skiprows = start_row - 1
+    nrows = end_row - start_row + 1
+    usecols = list(range(start_col, end_col + 1))
+
+    df = pd.read_excel(
+        file,
+        sheet_name=sheet_name,
+        skiprows=skiprows,
+        nrows=nrows,
+        usecols=usecols,
+        header=header,
+    )
+    return df
+
+
+def split_cell_reference(ref: str) -> Tuple[int, int]:
+    col_ref = "".join(filter(str.isalpha, ref))
+    row_ref = "".join(filter(str.isdigit, ref))
+
+    if not col_ref or not row_ref:
+        raise ValueError(f"Invalid cell reference: {ref}")
+
+    return column_reference_to_index(col_ref), int(row_ref)
+
+
+def column_reference_to_index(label: str) -> int:
+    label = label.upper()
+
+    if not label.isalpha():
+        raise ValueError(f"Invalid column label: {label}")
+
+    index = 0
+    for char in label:
+        index = index * 26 + (ord(char) - ord("A") + 1)
+
+    return index - 1
+
+
+def get_cell_range(
+    cell_range: Tuple[str, str],
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    if len(cell_range) != 2:
+        raise ValueError("cell_range must contain two cell references.")
+
+    start_col, start_row = split_cell_reference(cell_range[0])
+    end_col, end_row = split_cell_reference(cell_range[1])
+
+    return (start_col, end_col), (start_row, end_row)
+
+
+def get_row_ids(file, sheet, data_range, col_label):
+    (_, _), (r0, r1) = get_cell_range(data_range)
+    col = column_reference_to_index(col_label)
+    return (
+        pd.read_excel(
+            file,
+            sheet_name=sheet,
+            skiprows=r0 - 1,
+            nrows=r1 - r0 + 1,
+            usecols=[col],
+            header=None,
+        )
+        .iloc[:, 0]
+        .tolist()
+    )
+
+
+def get_col_ids(file, sheet, data_range, row_num):
+    (c0, c1), (_, _) = get_cell_range(data_range)
+    return (
+        pd.read_excel(
+            file,
+            sheet_name=sheet,
+            skiprows=row_num - 1,
+            nrows=1,
+            usecols=list(range(c0, c1 + 1)),
+            header=None,
+        )
+        .iloc[0]
+        .tolist()
+    )

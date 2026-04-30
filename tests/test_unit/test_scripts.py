@@ -1,6 +1,6 @@
 import pytest
 
-from scripts.swanson_datasets_to_csvs import (
+from brainglobe_data_api_connectivity.io.excel import (
     column_reference_to_index,
     get_cell_range,
     split_cell_reference,

@@ -3,7 +3,7 @@ import re
 import numpy as np
 import pytest
 
-from brainglobe_data_api_connectivity.preprocess.validate_data import (
+from brainglobe_data_api_connectivity.io.validate_input import (
     validate_matrix,
 )
 
