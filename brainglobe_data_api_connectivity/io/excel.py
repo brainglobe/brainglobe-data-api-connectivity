@@ -1,11 +1,17 @@
 """Excel-related helpers."""
 
-from typing import Tuple
+from pathlib import Path
+from typing import Optional, Tuple
 
 import pandas as pd
 
 
-def get_df_from_excel(file, sheet_name, data_range, header=None):
+def get_df_from_excel(
+    file: Path,
+    sheet_name: str,
+    data_range: Tuple[str, str],
+    header: Optional[int] = None,
+) -> pd.DataFrame:
     """Return DataFrame sliced to given row/column ranges."""
     col_range, row_range = get_cell_range(data_range)
 
@@ -62,7 +68,12 @@ def get_cell_range(
     return (start_col, end_col), (start_row, end_row)
 
 
-def get_row_ids(file, sheet, data_range, col_label):
+def get_row_ids(
+    file: Path,
+    sheet: str,
+    data_range: tuple[str, str],
+    col_label: str,
+):
     (_, _), (r0, r1) = get_cell_range(data_range)
     col = column_reference_to_index(col_label)
     return (
@@ -79,7 +90,9 @@ def get_row_ids(file, sheet, data_range, col_label):
     )
 
 
-def get_col_ids(file, sheet, data_range, row_num):
+def get_col_ids(
+    file: Path, sheet: str, data_range: tuple[str, str], row_num: int
+):
     (c0, c1), (_, _) = get_cell_range(data_range)
     return (
         pd.read_excel(
