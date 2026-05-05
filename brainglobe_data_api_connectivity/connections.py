@@ -270,3 +270,19 @@ class Connections:
             self.edge_info = None
             self.ei_from_col = None
             self.ei_to_col = None
+
+    def _node_indexes_from_information(
+        self, *predicates, **constraints
+    ) -> pl.Series:
+        """Return graph indexes of nodes that match the given information.
+
+        This is essentially a convenience wrapper around a `DataFrame` `filter`
+        followed by a `get_column`. Intended use is so that users can select
+        nodes by neurological (?) information, and the API then handles
+        translating this information into the relevant internal node indexes,
+        running the actual graph-theoretic query, and then returning
+        the results.
+        """
+        return self.nodes.filter(*predicates, **constraints).get_column(
+            self._node_internal_index_col
+        )
