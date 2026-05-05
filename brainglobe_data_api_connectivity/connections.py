@@ -26,7 +26,6 @@ class Connections:
         nodes: Path,
         edge_table: Path,
         edge_meta: Path | None = None,
-        node_index_column: str | None = None,
         **constructor_kwargs,
     ) -> "Connections":
         """Create `Connections` by reading information from a file.
@@ -47,12 +46,6 @@ class Connections:
                     about connected regions.
             edge_meta: Path
                 Path to the file containing metadata about edge connections.
-            node_index_column: str | None = None
-                If provided, use the column with this header as the index for
-                    the nodes. The edge table (and edge metadata) is then
-                    assumed to use the values in this column to identify the
-                    nodes. By default, the row index of the entries in `nodes`
-                    are assumed to be these identifiers.
             constructor_kwargs:
                 Additional keyword arguments to pass to the constructor method.
                     Accepts
