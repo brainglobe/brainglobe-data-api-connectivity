@@ -282,6 +282,22 @@ class Connections:
         translating this information into the relevant internal node indexes,
         running the actual graph-theoretic query, and then returning
         the results.
+
+        Graph indexes are stored in the `.nodes` attribute, in the
+        `self._node_internal_index_col` column. The values in this column,
+        whose other row values match the given filters, are returned by this
+        function.
+
+        Args:
+            predicates:
+                See [`polars.DataFrame.filter`](https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.filter.html).
+            constraints:
+                See [`polars.DataFrame.filter`](https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.filter.html).
+
+        Returns:
+            graph_indexes:
+                Series containing all internal node indexes in `self.network`
+                that correspond to nodes with the given metadata.
         """
         return self.nodes.filter(*predicates, **constraints).get_column(
             self._node_internal_index_col
