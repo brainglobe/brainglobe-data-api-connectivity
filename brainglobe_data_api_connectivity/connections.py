@@ -148,6 +148,13 @@ class Connections:
 
         At the end of this method, `self.network` and `self.nodes` are set.
         """
+        if self._node_internal_index_col in nodes:
+            raise ValueError(
+                f"Heading '{self._node_internal_index_col}' must not be "
+                "present in the node metadata, as it is reserved"
+                "for internal index referencing."
+            )
+
         n_nodes = len(nodes)
 
         if self._node_internal_index_col in nodes:
