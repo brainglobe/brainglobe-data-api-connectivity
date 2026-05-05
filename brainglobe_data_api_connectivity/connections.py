@@ -14,6 +14,9 @@ class Connections:
     ergo, we shall have an attribute instead.
     """
 
+    _edge_meta_index_col: str = "graph_edge"
+    _node_internal_index_col: str = "node_index"
+
     edge_info: pl.DataFrame | None
     ei_from_col: str | None
     ei_to_col: str | None
@@ -131,6 +134,13 @@ class Connections:
 
         At the end of this method, `self.network` and `self.nodes` are set.
         """
+        if self._node_internal_index_col in nodes:
+            raise ValueError(
+                f"Heading '{self._node_internal_index_col}' must not be "
+                "present in the node metadata, as it is reserved"
+                "for internal index referencing."
+            )
+
         n_nodes = len(nodes)
 
         self.network = PyDiGraph(
@@ -142,9 +152,11 @@ class Connections:
 
         # Internal node indexes should just be the range from 0 -> n_nodes-1,
         # since rustworkx graphs assign sequential indexes to given nodes.
-        self.network.add_nodes_from(range(n_nodes))
+        assigned_indexes = self.network.add_nodes_from(range(n_nodes))
 
-        self.nodes = nodes
+        self.nodes = nodes.with_columns(
+            **{self._node_internal_index_col: [i for i in assigned_indexes]}
+        )
         self.network.add_edges_from(edge_table)
 
     def _setup_edge_metadata(

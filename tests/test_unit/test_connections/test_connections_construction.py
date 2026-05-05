@@ -60,9 +60,12 @@ def test_connections_construction(
     nodes_after = G.nodes
     meta_after = G.edge_info
 
-    # Don't drop any nodes
-    assert nodes_after.shape == nodes_before.shape
+    # Don't drop any nodes...
+    assert nodes_after.shape[0] == nodes_before.shape[0]
     assert G.network.num_nodes() == nodes_after.shape[0]
+    # ...but add internal index column
+    assert nodes_after.shape[1] == nodes_before.shape[1] + 1
+    assert G._node_internal_index_col in G.nodes
 
     # Place all edges into the network
     constructed_edge_list = G.network.edge_list()
