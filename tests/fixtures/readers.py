@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 import pytest
 
 from brainglobe_data_api_connectivity._types import EdgeTable
@@ -14,12 +14,6 @@ def read_edge_table() -> Callable[[Path], EdgeTable]:
     """
 
     def _inner(path: Path) -> EdgeTable:
-        return tuple(
-            t
-            for t in pd.read_csv(path, delimiter=",", header=None).itertuples(
-                index=False,
-                name=None,
-            )
-        )
+        return list(pl.read_csv(path, has_header=False).iter_rows(named=False))
 
     return _inner

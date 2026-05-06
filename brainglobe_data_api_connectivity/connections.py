@@ -1,7 +1,6 @@
-import csv
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 from rustworkx import PyDiGraph
 
 from ._types import EdgeTable
@@ -15,9 +14,11 @@ class Connections:
     ergo, we shall have an attribute instead.
     """
 
-    edge_info: pd.DataFrame | None
+    _edge_meta_index_col: str = "graph_edge"
+
+    edge_info: pl.DataFrame | None
     network: PyDiGraph
-    nodes: pd.DataFrame
+    nodes: pl.DataFrame
 
     @classmethod
     def from_files(
@@ -25,7 +26,6 @@ class Connections:
         nodes: Path,
         edge_table: Path,
         edge_meta: Path | None = None,
-        node_index_column: str | None = None,
         **constructor_kwargs,
     ) -> "Connections":
         """Create `Connections` by reading information from a file.
@@ -33,6 +33,10 @@ class Connections:
         TODO: Update me if we decide to include an info.json file inside a
         folder, in which case the path to the info.json file (or the containing
         folder) should be the input(s).
+
+        NOTE: Like the constructor method, this method assumes that the nodes
+        are referred to by their row-index in the `nodes` file in both the edge
+        table and any edge metadata.
 
         Args:
             nodes: Path
@@ -42,12 +46,6 @@ class Connections:
                     about connected regions.
             edge_meta: Path
                 Path to the file containing metadata about edge connections.
-            node_index_column: str | None = None
-                If provided, use the column with this header as the index for
-                    the nodes. The edge table (and edge metadata) is then
-                    assumed to use the values in this column to identify the
-                    nodes. By default, the row index of the entries in `nodes`
-                    are assumed to be these identifiers.
             constructor_kwargs:
                 Additional keyword arguments to pass to the constructor method.
                     Accepts
@@ -59,21 +57,14 @@ class Connections:
         Returns:
             connections: `Connections` instance created from file information.
         """
-        node_collection = pd.read_csv(
-            nodes, delimiter=",", index_col=node_index_column
+        node_collection = pl.read_csv(nodes)
+
+        edge_table_entries = list(
+            pl.read_csv(edge_table, has_header=False).iter_rows(named=False)
         )
 
-        with edge_table.open("r") as edge_file:
-            edge_reader = csv.reader(edge_file, delimiter=",")
-
-            # Currently no filter on weight 0, so will add an edge!
-            edge_table_entries = tuple(
-                (int(row[0]), int(row[1]), float(row[2]))
-                for row in edge_reader
-            )
-
         if edge_meta is not None:
-            edge_meta = pd.read_csv(edge_meta, delimiter=",")
+            edge_meta = pl.read_csv(edge_meta)
 
         return cls(
             edge_table=edge_table_entries,
@@ -85,8 +76,8 @@ class Connections:
     def __init__(
         self,
         edge_table: EdgeTable,
-        nodes: pd.DataFrame,
-        edge_meta: pd.DataFrame | None = None,
+        nodes: pl.DataFrame,
+        edge_meta: pl.DataFrame | None = None,
         *,
         edge_meta_from_col: str = "from",
         edge_meta_to_col: str = "to",
@@ -96,16 +87,19 @@ class Connections:
         Args:
             edge_table: EdgeTable
                 Edge-table representation of the node connections; a container
-                    of `[from, to, weight]` values.
+                    of `[from, to, weight]` values. `from` and `to` values
+                    should refer to nodes by the index of their corresponding
+                    row in `nodes`.
             nodes: pd.DataFrame
                 DataFrame containing information about the nodes. The index
                     will be overwritten by the internal indexes used for the
                     nodes by the internal network representation.
             edge_meta: pd.DataFrame
                 DataFrame containing information about connections. Two columns
-                    must be present that contain the index of the node "from"
-                    which the edge leaves and "to" which the edge connects. All
-                    other columns are assumed to contain data.
+                    must be present that contain the index (of the
+                    corresponding row in `nodes`) of the node "from" which the
+                    edge leaves and "to" which the edge connects. All other
+                    columns are assumed to contain data.
             edge_meta_from_col: str
                 Header of the column in the `edge_meta` argument containing the
                     "from" node indexes.
@@ -121,7 +115,7 @@ class Connections:
 
     def _setup_network(
         self,
-        nodes: pd.DataFrame,
+        nodes: pl.DataFrame,
         edge_table: EdgeTable,
     ) -> None:
         """Creates the underlying network representation of the connections.
@@ -132,50 +126,29 @@ class Connections:
 
         The `nodes` attribute is also set during this method. This is a table
         where table index `i` contains any information about the node with
-        index `i` in the underlying network object.
-
-        Note that the underlying network object chooses its own internal
-        indexing for the nodes (and thus edges). To ensure consistency, we
-        first create the nodes in the graph from the index of the table
-        provided, then swap out this indexing method for the indexes assigned
-        to each node by the graph.
+        (internal) index `i` in the underlying network object.
 
         At the end of this method, `self.network` and `self.nodes` are set.
         """
+        n_nodes = len(nodes)
+
         self.network = PyDiGraph(
             check_cycle=False,
             multigraph=False,
-            node_count_hint=len(nodes),
+            node_count_hint=n_nodes,
             edge_count_hint=len(edge_table),
         )
 
-        # Fairly sure this should always be sequential integers...
-        # but better safe than sorry
-        self.nodes = nodes
-        _internal_node_indexes = self.network.add_nodes_from(self.nodes.index)
-        # self.nodes.index.map(lambda x: _internal_node_indexes[x])
-        self.nodes.rename(
-            index={
-                old_index: _internal_node_indexes[i]
-                for i, old_index in enumerate(self.nodes.index)
-            },
-            inplace=True,
-        )
+        # Internal node indexes should just be the range from 0 -> n_nodes-1,
+        # since rustworkx graphs assign sequential indexes to given nodes.
+        self.network.add_nodes_from(range(n_nodes))
 
-        self.network.add_edges_from(
-            [
-                (
-                    self.nodes.index[row[0]],
-                    self.nodes.index[row[1]],
-                    row[2],
-                )
-                for row in edge_table
-            ]
-        )
+        self.nodes = nodes
+        self.network.add_edges_from(edge_table)
 
     def _setup_edge_metadata(
         self,
-        edge_meta: pd.DataFrame | None,
+        edge_meta: pl.DataFrame | None,
         from_column: str,
         to_column: str,
     ) -> None:
@@ -190,23 +163,27 @@ class Connections:
 
         At the end of this method, `self.edge_info` is set.
         """
-        self.edge_info = edge_meta
-
-        if self.edge_info is not None:
+        if edge_meta is not None:
             if from_column == to_column:
                 raise ValueError(
                     "Connection metadata 'from' and 'to' columns are the same "
                     f"({from_column})."
                 )
+            if self._edge_meta_index_col in edge_meta:
+                raise ValueError(
+                    f"Heading '{self._edge_meta_index_col}' must not be "
+                    "present in the edge metadata table, as it is reserved"
+                    "for internal index referencing."
+                )
 
-            # If we are also storing edge metadata, we need to update the
-            # "from" and "to" node reference columns to use the internal node
-            # indexes as well.
-            self.edge_info[from_column].map(lambda x: self.nodes.index[x])
-            self.edge_info[to_column].map(lambda x: self.nodes.index[x])
-
-            self.edge_info.set_index(
-                [from_column, to_column],
-                drop=True,
-                inplace=True,
+            self.edge_info = edge_meta.with_columns(
+                edge_meta.select(
+                    pl.concat_arr(from_column, to_column).alias(
+                        self._edge_meta_index_col
+                    )
+                )
             )
+            self.edge_info.drop_in_place(from_column)
+            self.edge_info.drop_in_place(to_column)
+        else:
+            self.edge_info = None
