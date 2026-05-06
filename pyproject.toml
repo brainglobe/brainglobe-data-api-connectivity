@@ -37,6 +37,7 @@ classifiers = [
 dev = [
   "pytest",
   "pytest-cov",
+  "pytest-mock",
   "coverage",
   "tox",
   "mypy",
