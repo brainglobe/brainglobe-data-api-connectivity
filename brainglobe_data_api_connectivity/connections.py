@@ -39,10 +39,6 @@ class Connections:
         folder, in which case the path to the info.json file (or the containing
         folder) should be the input(s).
 
-        NOTE: Like the constructor method, this method assumes that the nodes
-        are referred to by their row-index in the `nodes` file in both the edge
-        table and any edge metadata.
-
         Args:
             nodes: Path
                 Path to the file containing information about regions (nodes).
@@ -55,7 +51,8 @@ class Connections:
                 Additional keyword arguments to pass to the constructor method.
                     Accepts
                     - `edge_meta_from_col`,
-                    - `edge_meta_to_col`.
+                    - `edge_meta_to_col`,
+                    - `nodes_already_indexed_by`.
 
                     See `Connections.__init__` for more information.
 
@@ -94,8 +91,7 @@ class Connections:
             edge_table: EdgeTable
                 Edge-table representation of the node connections; a container
                     of `[from, to, weight]` values. `from` and `to` values
-                    should refer to nodes by the index of their corresponding
-                    row in `nodes`.
+                    should refer to nodes by their identifier in `nodes`.
             nodes: pd.DataFrame
                 DataFrame containing information about the nodes. The index
                     will be overwritten by the internal indexes used for the
@@ -112,6 +108,12 @@ class Connections:
             edge_meta_to_col: str
                 Header of the column in the `edge_meta` argument containing the
                     "to" node indexes.
+            nodes_already_indexed_by: str | None
+                Column header in `nodes` that is being used as the unique
+                    identifier (index) for the nodes in the `edge_table` and
+                    `edge_meta` inputs. If not provided, the method assumes the
+                    row index of a node in `nodes` is being used as the
+                    identifier.
         """
         index_translations = self._setup_network(
             nodes, edge_table, existing_node_indexing=nodes_already_indexed_by
