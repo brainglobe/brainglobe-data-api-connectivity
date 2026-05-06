@@ -245,6 +245,8 @@ class Connections:
                     .replace(index_translations)
                     .alias(self.ei_to_col),
                 )
+            else:
+                self.edge_info = edge_meta
         else:
             self.edge_info = None
             self.ei_from_col = None

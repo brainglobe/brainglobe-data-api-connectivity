@@ -19,6 +19,18 @@ def abc_nodes() -> pl.DataFrame:
     )
 
 
+@pytest.fixture
+def edge_metadata() -> pl.DataFrame:
+    "A simple 'edge metadata' frame for testing setup."
+    return pl.DataFrame(
+        {
+            "to": [0, 1, 2],
+            "from": [1, 2, 0],
+            "type": ["a", "b", "c"],
+        }
+    )
+
+
 @pytest.mark.parametrize(
     (
         "nodes",
@@ -83,7 +95,6 @@ def test_connections_setup_network(
     mocker: pytest_mock.MockerFixture,
     request: pytest.FixtureRequest,
 ) -> None:
-    """"""
     if isinstance(nodes, str):
         nodes = request.getfixturevalue(nodes)
 
@@ -169,7 +180,6 @@ def test_connections_setup_network_error_catches(
     mocker: pytest_mock.MockerFixture,
     raises_error,
 ) -> None:
-    """Catch error cases that may emerge from attempting to setup a network."""
     mocker.patch.object(Connections, "__init__", lambda *args, **kwargs: None)
     G = Connections()
 
@@ -180,132 +190,124 @@ def test_connections_setup_network_error_catches(
 
 
 @pytest.mark.parametrize(
-    "from_files",
+    ("edge_meta", "index_translations", "from_column", "to_column"),
     [
-        pytest.param(True, id="From files"),
-        pytest.param(False, id="Direct construction"),
-    ],
-)
-@pytest.mark.parametrize(
-    ("edge_metadata", "kwargs"),
-    [
-        pytest.param(None, {}, id="No metadata"),
-        pytest.param("small-edge-meta.csv", {}, id="With metadata"),
         pytest.param(
-            "small-edge-meta.csv",
-            {"edge_meta_from_col": "from_alt", "edge_meta_to_col": "to_alt"},
-            id="With metadata, custom to/from columns",
+            None,
+            None,
+            "from",
+            "to",
+            id="No metadata",
+        ),
+        pytest.param(
+            "edge_metadata",
+            None,
+            "from",
+            "to",
+            id="At face value",
+        ),
+        pytest.param(
+            "edge_metadata",
+            {0: 5, 1: 10, 2: 20},
+            "from",
+            "to",
+            id="Re-indexing has occurred",
+        ),
+        pytest.param(
+            "edge_metadata",
+            None,
+            "to",  # Note that to mimic alternative columns,
+            "from",  # we're passing to as from and vice-versa
+            id="Alternative from/to columns used",
+        ),
+        pytest.param(
+            "edge_metadata",
+            {0: 5, 1: 10, 2: 20},
+            "to",
+            "from",
+            id="Alt columns and re-indexing",
         ),
     ],
 )
-def test_connections_construction(
-    DATA_DIR,
-    read_edge_table,
-    edge_metadata: str | None,
-    kwargs: dict[str, str],
-    from_files: bool,
-    nodes="small-nodes.csv",
-    edge_table="small-edge-table.csv",
+def test_connections_setup_edge_metadata(
+    edge_meta: pl.DataFrame | None,
+    index_translations: dict[int, int] | None,
+    from_column: str,
+    to_column: str,
+    mocker: pytest_mock.MockerFixture,
+    request: pytest.FixtureRequest,
 ) -> None:
-    """Tests that, if nodes are provided using a different convention to row
-    index identifiers, re-indexing via the network setup is handled correctly.
-    """
-    _node_file = DATA_DIR / nodes
-    _edge_file = DATA_DIR / edge_table
-    _edge_meta_file = DATA_DIR / edge_metadata if edge_metadata else None
+    if isinstance(edge_meta, str):
+        edge_meta = request.getfixturevalue(edge_meta)
 
-    nodes = pl.read_csv(_node_file)
-    edge_table = read_edge_table(_edge_file)
+    mocker.patch.object(Connections, "__init__", lambda *args, **kwargs: None)
+    G = Connections()
 
-    meta_before: None | pl.DataFrame
-    if edge_metadata is not None:
-        edge_metadata = pl.read_csv(_edge_meta_file)
-        meta_before = pl.DataFrame(edge_metadata)
-    else:
-        meta_before = None
-    nodes_before = pl.DataFrame(nodes)
+    G._setup_edge_metadata(
+        edge_meta, from_column, to_column, index_translations
+    )
 
-    if from_files:
-        G = Connections.from_files(
-            _node_file, _edge_file, _edge_meta_file, **kwargs
-        )
-    else:
-        G = Connections(edge_table, nodes, edge_metadata, **kwargs)
-
-    nodes_after = G.nodes
-    meta_after = G.edge_info
-
-    # Don't drop any nodes...
-    assert nodes_after.shape[0] == nodes_before.shape[0]
-    assert G.network.num_nodes() == nodes_after.shape[0]
-    # ...but add internal index column
-    assert nodes_after.shape[1] == nodes_before.shape[1] + 1
-    assert G._node_internal_index_col in G.nodes
-
-    # Place all edges into the network
-    constructed_edge_list = G.network.edge_list()
-    assert len(edge_table) == len(constructed_edge_list)
-    for from_node, to_node, weight in edge_table:
-        assert (from_node, to_node) in constructed_edge_list
-        assert G.network.get_edge_data(from_node, to_node) == weight
-
-    if meta_before is None:
-        assert meta_after is None
+    if edge_meta is None:
+        assert G.edge_info is None
         assert G.ei_from_col is None
         assert G.ei_to_col is None
     else:
-        assert meta_after is not None
+        assert G.edge_info is not None
+        assert G.ei_from_col == from_column
+        assert G.ei_to_col == to_column
 
-        # Identify the columns that would have been set as the from and to
-        # columns in the edge metadata table.
-        from_col = kwargs.get("edge_meta_from_col", "from")
-        to_col = kwargs.get("edge_meta_to_col", "to")
-
-        # Metadata table should retain shape
-        assert meta_before.shape == meta_after.shape
-        # ...and attributes that identify the from and to columns should be
-        # populated
-        assert G.ei_from_col == from_col
-        assert G.ei_to_col == to_col
-
-        metadata_headers = list(
-            c for c in meta_before.columns if c not in {from_col, to_col}
+        assert G.edge_info.shape == edge_meta.shape
+        preserved_columns = set(
+            c for c in edge_meta.columns if c not in [from_column, to_column]
         )
-        # All non "to"- and "from"-column entries should have been preserved
-        for row in meta_before.iter_rows(named=True):
-            identical_row = meta_after.row(
-                by_predicate=(
-                    (pl.col(G.ei_from_col) == row[from_col])
-                    & (pl.col(G.ei_to_col) == row[to_col])
-                ),
+
+        # Confirm metadata has been updated to respect any index translations
+        for row in edge_meta.iter_rows(named=True):
+            if index_translations is not None:
+                new_from = index_translations[row[from_column]]
+                new_to = index_translations[row[to_column]]
+            else:
+                new_from = row[from_column]
+                new_to = row[to_column]
+
+            unique_matching_row = G.edge_info.row(
+                by_predicate=(pl.col(G.ei_from_col) == new_from)
+                & (pl.col(G.ei_to_col) == new_to),
                 named=True,
             )
-            for header in metadata_headers:
-                assert identical_row[header] == row[header]
+
+            for col in preserved_columns:
+                assert row[col] == unique_matching_row[col]
 
 
-def test_connections_construction_same_from_to_cols(
-    DATA_DIR,
-    read_edge_table,
+@pytest.mark.parametrize(
+    ("edge_meta", "from_column", "to_column", "expected_exception"),
+    [
+        pytest.param(
+            pl.DataFrame(),
+            "to_from",
+            "to_from",
+            ValueError(
+                "Connection metadata 'from' and 'to' columns are the same "
+                "(to_from)"
+            ),
+            id="Same 'to' and 'from' column.",
+        )
+    ],
+)
+def test_connections_setup_edge_metadata_errors(
+    edge_meta: pl.DataFrame | None,
+    from_column: str,
+    to_column: str,
+    expected_exception: Exception,
+    mocker: pytest_mock.MockerFixture,
     raises_error,
-    expected_error: Exception = ValueError(
-        "Connection metadata 'from' and 'to' columns are the same (to_from)."
-    ),
-    nodes="small-nodes.csv",
-    edge_table="small-edge-table.csv",
-    edge_metadata="small-edge-meta.csv",
-):
-    """Check that one cannot supply the same column as both the 'from' node and
-    'to' node when supplying edge metadata.
-    """
-    edge_table = read_edge_table(DATA_DIR / edge_table)
-    nodes = pl.read_csv(DATA_DIR / nodes)
-    edge_metadata = pl.read_csv(DATA_DIR / edge_metadata)
-    with raises_error(expected_error):
-        Connections(
-            edge_table,
-            nodes,
-            edge_metadata,
-            edge_meta_from_col="to_from",
-            edge_meta_to_col="to_from",
+    indexing_translations: dict[int, int] | None = None,
+) -> None:
+    mocker.patch.object(Connections, "__init__", lambda *args, **kwargs: None)
+    G = Connections()
+
+    with raises_error(expected_exception):
+        G._setup_edge_metadata(
+            edge_meta, from_column, to_column, indexing_translations
         )
