@@ -1,6 +1,9 @@
+from typing import Hashable
+
 import polars as pl
 import pytest
 import pytest_mock
+from polars.testing import assert_frame_equal
 
 from brainglobe_data_api_connectivity._types import EdgeTable
 from brainglobe_data_api_connectivity.connections import Connections
@@ -231,7 +234,7 @@ def test_connections_setup_network_error_catches(
 )
 def test_connections_setup_edge_metadata(
     edge_meta: pl.DataFrame | None,
-    index_translations: dict[int, int] | None,
+    index_translations: dict[Hashable, int] | None,
     from_column: str,
     to_column: str,
     mocker: pytest_mock.MockerFixture,
@@ -302,7 +305,7 @@ def test_connections_setup_edge_metadata_errors(
     expected_exception: Exception,
     mocker: pytest_mock.MockerFixture,
     raises_error,
-    indexing_translations: dict[int, int] | None = None,
+    indexing_translations: dict[Hashable, int] | None = None,
 ) -> None:
     mocker.patch.object(Connections, "__init__", lambda *args, **kwargs: None)
     G = Connections()
@@ -311,3 +314,37 @@ def test_connections_setup_edge_metadata_errors(
         G._setup_edge_metadata(
             edge_meta, from_column, to_column, indexing_translations
         )
+
+
+def test_connections_construction(
+    DATA_DIR,
+    read_edge_table,
+    constructor_kwargs: dict = {},
+    nodes="small-nodes.csv",
+    edge_table="small-edge-table.csv",
+    edge_meta="small-edge-meta.csv",
+) -> None:
+    """Check that identical instances can be created using either constructor
+    method.
+    """
+    nodes = DATA_DIR / nodes
+    edge_table = DATA_DIR / edge_table
+    edge_meta = DATA_DIR / edge_meta
+
+    G_from_file = Connections.from_files(
+        nodes, edge_table, edge_meta, **constructor_kwargs
+    )
+    G_via_construction = Connections(
+        read_edge_table(edge_table),
+        pl.read_csv(nodes),
+        pl.read_csv(edge_meta),
+        **constructor_kwargs,
+    )
+
+    assert_frame_equal(G_from_file.nodes, G_via_construction.nodes)
+    assert G_from_file.network.nodes() == G_via_construction.network.nodes()
+    assert (
+        G_from_file.network.edge_list()
+        == G_via_construction.network.edge_list()
+    )
+    assert_frame_equal(G_from_file.edge_info, G_via_construction.edge_info)
