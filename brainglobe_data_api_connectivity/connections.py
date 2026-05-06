@@ -147,7 +147,7 @@ class Connections:
         if self._node_internal_index_col in nodes:
             raise ValueError(
                 f"Heading '{self._node_internal_index_col}' must not be "
-                "present in the node metadata, as it is reserved"
+                "present in the node metadata, as it is reserved "
                 "for internal index referencing."
             )
         if existing_node_indexing is not None:
@@ -177,7 +177,11 @@ class Connections:
         assigned_indexes = self.network.add_nodes_from(range(n_nodes))
 
         self.nodes = nodes.with_columns(
-            **{self._node_internal_index_col: [i for i in assigned_indexes]}
+            **{
+                self._node_internal_index_col: pl.Series(
+                    [i for i in assigned_indexes]
+                )
+            }
         )
 
         if existing_node_indexing is None:
@@ -210,7 +214,7 @@ class Connections:
         edge_meta: pl.DataFrame | None,
         from_column: str,
         to_column: str,
-        index_translations: dict[Hashable, str] | None = None,
+        index_translations: dict[Hashable, int] | None = None,
     ) -> None:
         """Setup storage for edge (connection) metadata.
 

@@ -2,34 +2,95 @@ import polars as pl
 import pytest
 import pytest_mock
 
+from brainglobe_data_api_connectivity._types import EdgeTable
 from brainglobe_data_api_connectivity.connections import Connections
 
 
+@pytest.fixture
+def abc_nodes() -> pl.DataFrame:
+    """Simple collection of nodes to use when checking network setup."""
+    return pl.DataFrame(
+        {
+            "name": ["alpha", "beta", "gamma"],
+            "mass": [1.0, 5.0, 10.0],
+            "custom_index": [1, 2, 3],
+            "rev_custom_index": [3, 2, 1],
+        }
+    )
+
+
 @pytest.mark.parametrize(
-    "existing_node_indexing",
+    (
+        "nodes",
+        "edge_table",
+        "existing_node_indexing",
+        "expected_node_indexing",
+    ),
     [
-        pytest.param(None, id="No custom indexing"),
-        pytest.param("reverse_custom_index", id="Custom index (reversed)"),
+        pytest.param(
+            pl.DataFrame({"nodes": []}),
+            (),
+            None,
+            None,
+            id="Empty graph",
+        ),
+        pytest.param(
+            "abc_nodes",
+            [
+                (0, 1, 1),  # alpha -> beta, 1
+                (0, 2, 2),  # alpha -> gamma, 2
+                (1, 0, -1),  # beta -> alpha, -1
+                (1, 2, 3),  # beta -> gamma, 3
+                (2, 0, -2),  # gamma - alpha, -2
+            ],
+            None,
+            None,
+            id="No custom indexing",
+        ),
+        pytest.param(
+            "abc_nodes",
+            [
+                (1, 2, 1),  # alpha -> beta, 1
+                (1, 3, 2),  # alpha -> gamma, 2
+                (2, 1, -1),  # beta -> alpha, -1
+                (2, 3, 3),  # beta -> gamma, 3
+                (3, 1, -2),  # gamma - alpha, -2
+            ],
+            "custom_index",
+            {1: 0, 2: 1, 3: 2},
+            id="Custom indexing",
+        ),
+        pytest.param(
+            "abc_nodes",
+            [
+                (3, 2, 1),  # alpha -> beta, 1
+                (3, 1, 2),  # alpha -> gamma, 2
+                (2, 3, -1),  # beta -> alpha, -1
+                (2, 1, 3),  # beta -> gamma, 3
+                (1, 3, -2),  # gamma - alpha, -2
+            ],
+            "rev_custom_index",
+            {3: 0, 2: 1, 1: 2},
+            id="Reverse custom indexing",
+        ),
     ],
 )
 def test_connections_setup_network(
+    nodes: pl.DataFrame,
+    edge_table: EdgeTable,
     existing_node_indexing: str | None,
-    DATA_DIR,
-    read_edge_table,
+    expected_node_indexing: dict[int, int] | None,
     mocker: pytest_mock.MockerFixture,
-    nodes="small-nodes.csv",
-    edge_table="small-edge-table.csv",
+    request: pytest.FixtureRequest,
 ) -> None:
     """"""
-    # Suppress setting of attributes on creation
+    if isinstance(nodes, str):
+        nodes = request.getfixturevalue(nodes)
+
+    # Suppress setting of attributes on creation,
     mocker.patch.object(Connections, "__init__", lambda *args, **kwargs: None)
+    # which allows us to create an "empty" connections object
     G = Connections()
-
-    _node_file = DATA_DIR / nodes
-    _edge_file = DATA_DIR / edge_table
-
-    nodes = pl.read_csv(_node_file)
-    edge_table = read_edge_table(_edge_file)
 
     nodes_before = pl.DataFrame(nodes)
     index_translations = G._setup_network(
@@ -58,12 +119,64 @@ def test_connections_setup_network(
     else:
         # Index translation was necessary. Confirm this was done correctly.
         assert index_translations is not None
+        assert index_translations == expected_node_indexing
 
         for from_node, to_node, weight in edge_table:
             new_from = index_translations[from_node]
             new_to = index_translations[to_node]
             assert (new_from, new_to) in constructed_edge_list
             assert G.network.get_edge_data(new_from, new_to) == weight
+
+
+@pytest.mark.parametrize(
+    ("nodes", "edge_table", "existing_index", "expected_error"),
+    [
+        pytest.param(
+            pl.DataFrame({Connections._node_internal_index_col: [0]}),
+            (),
+            None,
+            ValueError(
+                f"Heading '{Connections._node_internal_index_col}' must not "
+                "be present in the node metadata, as it is reserved for "
+                "internal index referencing"
+            ),
+            id="Reserved node index column present",
+        ),
+        pytest.param(
+            pl.DataFrame({"name": [0, 1, 2]}),
+            (),
+            "not_a_col",
+            ValueError("Heading not_a_col not present in node metadata."),
+            id="Existing column not present in node data.",
+        ),
+        pytest.param(
+            pl.DataFrame({"name": [0, 1, 0]}),
+            (),
+            "name",
+            ValueError(
+                "Given node index column contains repeat entries, thus cannot "
+                "be used as an index."
+            ),
+            id="Existing index column doesn't have unique values.",
+        ),
+    ],
+)
+def test_connections_setup_network_error_catches(
+    nodes: pl.DataFrame,
+    edge_table: EdgeTable,
+    existing_index: str | None,
+    expected_error: Exception,
+    mocker: pytest_mock.MockerFixture,
+    raises_error,
+) -> None:
+    """Catch error cases that may emerge from attempting to setup a network."""
+    mocker.patch.object(Connections, "__init__", lambda *args, **kwargs: None)
+    G = Connections()
+
+    with raises_error(expected_error):
+        G._setup_network(
+            nodes, edge_table, existing_node_indexing=existing_index
+        )
 
 
 @pytest.mark.parametrize(
