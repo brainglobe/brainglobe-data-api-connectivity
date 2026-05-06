@@ -69,16 +69,16 @@ class Connections:
             edge_meta = pl.read_csv(edge_meta)
 
         return cls(
-            edge_table=edge_table_entries,
             nodes=node_collection,
+            edge_table=edge_table_entries,
             edge_meta=edge_meta,
             **constructor_kwargs,
         )
 
     def __init__(
         self,
-        edge_table: EdgeTable,
         nodes: pl.DataFrame,
+        edge_table: EdgeTable,
         edge_meta: pl.DataFrame | None = None,
         *,
         edge_meta_from_col: str = "from",
@@ -88,14 +88,14 @@ class Connections:
         """Create a new set of connections.
 
         Args:
-            edge_table: EdgeTable
-                Edge-table representation of the node connections; a container
-                    of `[from, to, weight]` values. `from` and `to` values
-                    should refer to nodes by their identifier in `nodes`.
             nodes: pd.DataFrame
                 DataFrame containing information about the nodes. The index
                     will be overwritten by the internal indexes used for the
                     nodes by the internal network representation.
+            edge_table: EdgeTable
+                Edge-table representation of the node connections; a container
+                    of `[from, to, weight]` values. `from` and `to` values
+                    should refer to nodes by their identifier in `nodes`.
             edge_meta: pd.DataFrame
                 DataFrame containing information about connections. Two columns
                     must be present that contain the index (of the

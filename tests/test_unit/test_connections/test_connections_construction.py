@@ -335,8 +335,8 @@ def test_connections_construction(
         nodes, edge_table, edge_meta, **constructor_kwargs
     )
     G_via_construction = Connections(
-        read_edge_table(edge_table),
         pl.read_csv(nodes),
+        read_edge_table(edge_table),
         pl.read_csv(edge_meta),
         **constructor_kwargs,
     )
