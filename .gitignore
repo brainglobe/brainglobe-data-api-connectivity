@@ -20,6 +20,8 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -43,7 +45,10 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+*.py,cover
 .hypothesis/
+.pytest_cache/
+cover/
 
 # Translations
 *.mo
@@ -67,8 +72,10 @@ target/
 
 # Pycharm and VSCode
 .idea/
+env/
 venv/
-.vscode/
+.venv/
+.env
 
 # IPython Notebook
 .ipynb_checkpoints
@@ -81,3 +88,8 @@ venv/
 
 # written by setuptools-scm
 **/_version.py
+
+.mypy_cache/
+.ruff_cache/
+
+__pypackages__/
