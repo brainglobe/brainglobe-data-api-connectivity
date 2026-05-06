@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Hashable
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -85,6 +86,7 @@ class Connections:
         *,
         edge_meta_from_col: str = "from",
         edge_meta_to_col: str = "to",
+        nodes_already_indexed_by: str | None = None,
     ):
         """Create a new set of connections.
 
@@ -111,17 +113,23 @@ class Connections:
                 Header of the column in the `edge_meta` argument containing the
                     "to" node indexes.
         """
-        self._setup_network(nodes, edge_table)
+        index_translations = self._setup_network(
+            nodes, edge_table, existing_node_indexing=nodes_already_indexed_by
+        )
 
         self._setup_edge_metadata(
-            edge_meta, edge_meta_from_col, edge_meta_to_col
+            edge_meta,
+            edge_meta_from_col,
+            edge_meta_to_col,
+            index_translations=index_translations,
         )
 
     def _setup_network(
         self,
         nodes: pl.DataFrame,
         edge_table: EdgeTable,
-    ) -> None:
+        existing_node_indexing: str | None = None,
+    ) -> dict[Hashable, int] | None:
         """Creates the underlying network representation of the connections.
 
         Sets up the `network` attribute by initialising the underlying graph
@@ -134,14 +142,28 @@ class Connections:
 
         At the end of this method, `self.network` and `self.nodes` are set.
         """
+        n_nodes = len(nodes)
+
         if self._node_internal_index_col in nodes:
             raise ValueError(
                 f"Heading '{self._node_internal_index_col}' must not be "
                 "present in the node metadata, as it is reserved"
                 "for internal index referencing."
             )
-
-        n_nodes = len(nodes)
+        if existing_node_indexing is not None:
+            if existing_node_indexing not in nodes:
+                raise ValueError(
+                    f"Heading {existing_node_indexing} "
+                    "not present in node metadata."
+                )
+            n_unique_entries = len(
+                nodes.get_column(existing_node_indexing).unique()
+            )
+            if n_unique_entries != n_nodes:
+                raise ValueError(
+                    "Given node index column contains repeat entries,"
+                    " thus cannot be used as an index."
+                )
 
         self.network = PyDiGraph(
             check_cycle=False,
@@ -157,13 +179,38 @@ class Connections:
         self.nodes = nodes.with_columns(
             **{self._node_internal_index_col: [i for i in assigned_indexes]}
         )
-        self.network.add_edges_from(edge_table)
+
+        if existing_node_indexing is None:
+            self.network.add_edges_from(edge_table)
+            index_translations = None
+        else:
+            # Nodes are already indexed by a column in the node metadata,
+            # so the internal indexes assigned to them do not necessarily match
+            # their references in the edge table (and edge metadata either).
+            # Adapt as appropriate.
+            index_translations = {
+                row_dict[existing_node_indexing]: row_dict[
+                    self._node_internal_index_col
+                ]
+                for row_dict in self.nodes.iter_rows(named=True)
+            }
+            updated_edge_table = [
+                (
+                    index_translations[old_from],
+                    index_translations[old_to],
+                    weight,
+                )
+                for old_from, old_to, weight in edge_table
+            ]
+            self.network.add_edges_from(updated_edge_table)
+        return index_translations
 
     def _setup_edge_metadata(
         self,
         edge_meta: pl.DataFrame | None,
         from_column: str,
         to_column: str,
+        index_translations: dict[Hashable, str] | None = None,
     ) -> None:
         """Setup storage for edge (connection) metadata.
 
@@ -180,9 +227,20 @@ class Connections:
                     f"({from_column})."
                 )
 
-            self.edge_info = edge_meta
             self.ei_from_col = from_column
             self.ei_to_col = to_column
+
+            # Apply any index translations that occurred due to nodes not being
+            # indexed by row when they were read in.
+            if index_translations is not None:
+                self.edge_info = edge_meta.with_columns(
+                    pl.col(self.ei_from_col)
+                    .replace(index_translations)
+                    .alias(self.ei_from_col),
+                    pl.col(self.ei_to_col)
+                    .replace(index_translations)
+                    .alias(self.ei_to_col),
+                )
         else:
             self.edge_info = None
             self.ei_from_col = None

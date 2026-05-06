@@ -1,7 +1,69 @@
 import polars as pl
 import pytest
+import pytest_mock
 
 from brainglobe_data_api_connectivity.connections import Connections
+
+
+@pytest.mark.parametrize(
+    "existing_node_indexing",
+    [
+        pytest.param(None, id="No custom indexing"),
+        pytest.param("reverse_custom_index", id="Custom index (reversed)"),
+    ],
+)
+def test_connections_setup_network(
+    existing_node_indexing: str | None,
+    DATA_DIR,
+    read_edge_table,
+    mocker: pytest_mock.MockerFixture,
+    nodes="small-nodes.csv",
+    edge_table="small-edge-table.csv",
+) -> None:
+    """"""
+    # Suppress setting of attributes on creation
+    mocker.patch.object(Connections, "__init__", lambda *args, **kwargs: None)
+    G = Connections()
+
+    _node_file = DATA_DIR / nodes
+    _edge_file = DATA_DIR / edge_table
+
+    nodes = pl.read_csv(_node_file)
+    edge_table = read_edge_table(_edge_file)
+
+    nodes_before = pl.DataFrame(nodes)
+    index_translations = G._setup_network(
+        nodes, edge_table, existing_node_indexing=existing_node_indexing
+    )
+    nodes_after = G.nodes
+
+    # Don't drop any nodes...
+    assert nodes_after.shape[0] == nodes_before.shape[0]
+    assert G.network.num_nodes() == nodes_after.shape[0]
+    # ...but add internal index column
+    assert nodes_after.shape[1] == nodes_before.shape[1] + 1
+    assert G._node_internal_index_col in G.nodes
+
+    # Place all edges into the network
+    constructed_edge_list = G.network.edge_list()
+    if existing_node_indexing is None:
+        # No index translations were necessary, so nodes should have just been
+        # added using their row-indexes as their internal indexes.
+        # Edge table did not need to be adapted.
+        assert index_translations is None
+
+        for from_node, to_node, weight in edge_table:
+            assert (from_node, to_node) in constructed_edge_list
+            assert G.network.get_edge_data(from_node, to_node) == weight
+    else:
+        # Index translation was necessary. Confirm this was done correctly.
+        assert index_translations is not None
+
+        for from_node, to_node, weight in edge_table:
+            new_from = index_translations[from_node]
+            new_to = index_translations[to_node]
+            assert (new_from, new_to) in constructed_edge_list
+            assert G.network.get_edge_data(new_from, new_to) == weight
 
 
 @pytest.mark.parametrize(
