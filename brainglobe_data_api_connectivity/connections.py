@@ -39,10 +39,6 @@ class Connections:
         folder, in which case the path to the info.json file (or the containing
         folder) should be the input(s).
 
-        NOTE: Like the constructor method, this method assumes that the nodes
-        are referred to by their row-index in the `nodes` file in both the edge
-        table and any edge metadata.
-
         Args:
             nodes: Path
                 Path to the file containing information about regions (nodes).
