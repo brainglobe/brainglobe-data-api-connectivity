@@ -14,9 +14,10 @@ class Connections:
     ergo, we shall have an attribute instead.
     """
 
-    _edge_meta_index_col: str = "graph_edge"
-
     edge_info: pl.DataFrame | None
+    ei_from_col: str | None
+    ei_to_col: str | None
+
     network: PyDiGraph
     nodes: pl.DataFrame
 
@@ -154,14 +155,11 @@ class Connections:
     ) -> None:
         """Setup storage for edge (connection) metadata.
 
-        Edge metadata is stored as a `DataFrame`. Rows are indexed using a
-        `MultiIndex` of the form `(i, j)` to represent the edge from `i` to
-        `j`. This allows lookup of connection information via the `.loc[i, j]`.
-
         Note that edge metadata is optional, and the corresponding attribute is
         set to `None` if no such information is provided.
 
-        At the end of this method, `self.edge_info` is set.
+        At the end of this method, `self.edge_info` is set, as well as both of
+        `self.ei_{from,to}_col`.
         """
         if edge_meta is not None:
             if from_column == to_column:
@@ -169,21 +167,11 @@ class Connections:
                     "Connection metadata 'from' and 'to' columns are the same "
                     f"({from_column})."
                 )
-            if self._edge_meta_index_col in edge_meta:
-                raise ValueError(
-                    f"Heading '{self._edge_meta_index_col}' must not be "
-                    "present in the edge metadata table, as it is reserved"
-                    "for internal index referencing."
-                )
 
-            self.edge_info = edge_meta.with_columns(
-                edge_meta.select(
-                    pl.concat_arr(from_column, to_column).alias(
-                        self._edge_meta_index_col
-                    )
-                )
-            )
-            self.edge_info.drop_in_place(from_column)
-            self.edge_info.drop_in_place(to_column)
+            self.edge_info = edge_meta
+            self.ei_from_col = from_column
+            self.ei_to_col = to_column
         else:
             self.edge_info = None
+            self.ei_from_col = None
+            self.ei_to_col = None

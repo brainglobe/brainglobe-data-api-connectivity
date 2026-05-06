@@ -73,28 +73,32 @@ def test_connections_construction(
 
     if meta_before is None:
         assert meta_after is None
+        assert G.ei_from_col is None
+        assert G.ei_to_col is None
     else:
         assert meta_after is not None
 
-        # Identify the appropriate columns
+        # Identify the columns that would have been set as the from and to
+        # columns in the edge metadata table.
         from_col = kwargs.get("edge_meta_from_col", "from")
         to_col = kwargs.get("edge_meta_to_col", "to")
 
-        # For each edge that appeared in the OLD metadata, there should
-        # be a corresponding entry in the NEW metadata table...
-        assert meta_before.shape[0] == meta_after.shape[0]
-        # ... but the "to" and "from" column have been morphed a single column
-        assert meta_before.shape[1] == meta_after.shape[1] + 1
+        # Metadata table should retain shape
+        assert meta_before.shape == meta_after.shape
+        # ...and attributes that identify the from and to columns should be
+        # populated
+        assert G.ei_from_col == from_col
+        assert G.ei_to_col == to_col
 
         metadata_headers = list(
             c for c in meta_before.columns if c not in {from_col, to_col}
         )
         # All non "to"- and "from"-column entries should have been preserved
         for row in meta_before.iter_rows(named=True):
-            seek_new_index = [row[from_col], row[to_col]]
             identical_row = meta_after.row(
                 by_predicate=(
-                    pl.col(G._edge_meta_index_col) == seek_new_index
+                    (pl.col(G.ei_from_col) == row[from_col])
+                    & (pl.col(G.ei_to_col) == row[to_col])
                 ),
                 named=True,
             )
@@ -127,28 +131,3 @@ def test_connections_construction_same_from_to_cols(
             edge_meta_from_col="to_from",
             edge_meta_to_col="to_from",
         )
-
-
-def test_connections_construction_reserved_header_present(
-    raises_error,
-    expected_error=ValueError(
-        f"Heading '{Connections._edge_meta_index_col}' must not be "
-        "present in the edge metadata table, as it is reserved"
-        "for internal index referencing."
-    ),
-) -> None:
-    """Catch the case where the user's metadata on the edges contains a
-    column that uses the same name as the reserved column name for storing
-    edge (i, j) directed pairs.
-    """
-    nodes = pl.DataFrame(
-        {
-            "name": [0],
-        }
-    )
-    edge_table = [(0, 0, 0)]
-    edge_metadata = pl.DataFrame(
-        {"from": [0], "to": [0], Connections._edge_meta_index_col: [(0, 0)]}
-    )
-    with raises_error(expected_error):
-        Connections(edge_table, nodes, edge_meta=edge_metadata)
