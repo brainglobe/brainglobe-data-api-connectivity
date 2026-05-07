@@ -6,7 +6,6 @@
    :caption: Contents:
 
    neuro_to_math
-   getting_started
 ```
 
 This package acts as an interface between neurological region-connectivity data and network (graph) analysis.
