@@ -295,7 +295,21 @@ class Connections:
     def _node_information_from_index(
         self, node_indexes: Container[int]
     ) -> pl.DataFrame:
-        """Return information about nodes with the selected indexes."""
+        """Return information about nodes with the selected (internal) indexes.
+
+        Essentially a wrapper around a `polars.DataFrame.filter` that looks up
+        the relevant rows from the `.nodes` attribute and returns them.
+
+        Args:
+            node_indexes: Container[int]
+                Internal node indexes, referencing nodes to fetch information
+                about.
+
+        Returns:
+            node_information:
+                `polars.DataFrame` whose rows contain node information for the
+                requested nodes.
+        """
         return self.nodes.filter(
             pl.col(self._node_internal_index_col).is_in(node_indexes)
         )
