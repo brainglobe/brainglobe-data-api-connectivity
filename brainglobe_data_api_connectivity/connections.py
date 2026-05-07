@@ -15,7 +15,6 @@ class Connections:
     ergo, we shall have an attribute instead.
     """
 
-    _edge_meta_index_col: str = "graph_edge"
     _node_internal_index_col: str = "node_index"
 
     edge_info: pl.DataFrame | None
@@ -238,12 +237,6 @@ class Connections:
                 raise ValueError(
                     "Connection metadata 'from' and 'to' columns are the same "
                     f"({from_column})."
-                )
-            if self._edge_meta_index_col in edge_meta:
-                raise ValueError(
-                    f"Heading '{self._edge_meta_index_col}' must not be "
-                    "present in the edge metadata table, as it is reserved"
-                    "for internal index referencing."
                 )
 
             self.ei_from_col = from_column
