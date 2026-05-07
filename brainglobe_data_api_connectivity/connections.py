@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Hashable
+from typing import Container, Hashable
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -290,4 +290,12 @@ class Connections:
         """
         return self.nodes.filter(*predicates, **constraints).get_column(
             self._node_internal_index_col
+        )
+
+    def _node_information_from_index(
+        self, node_indexes: Container[int]
+    ) -> pl.DataFrame:
+        """Return information about nodes with the selected indexes."""
+        return self.nodes.filter(
+            pl.col(self._node_internal_index_col).is_in(node_indexes)
         )

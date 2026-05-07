@@ -1,5 +1,8 @@
+from typing import Container
+
 import polars as pl
 import pytest
+from polars.testing import assert_frame_equal, assert_series_equal
 
 from brainglobe_data_api_connectivity.connections import Connections
 
@@ -54,4 +57,45 @@ def test_node_index_lookup(
         == G._node_indexes_from_information(
             *predicates, **constraints
         ).to_list()
+    )
+
+
+@pytest.mark.parametrize(
+    ("seek_indexes", "should_find_names"),
+    [
+        pytest.param([100, 50], ["a", "c"], id="Find a & c"),
+        pytest.param([], [], id="Seek nothing"),
+        pytest.param([13], [], id="Index not used"),
+        pytest.param([25, 0], ["d"], id="Some unused indexes"),
+    ],
+)
+def test_node_information_lookup(
+    node_data: pl.DataFrame,
+    seek_indexes: Container[int],
+    should_find_names: Container[str],
+) -> None:
+    """Very basic test to confirm that information lookup by internal index
+    works as intended.
+
+    All this function does is wrap built-in polars functionality, so we just
+    run a few bare-minimum checks to confirm everything is as expected.
+    """
+    G = Connections(node_data, [])
+    # Overwrite the assigned "indexes" from the graph with our own manual
+    # indexes, so we can confirm lookup behaviour
+    G.nodes.drop_in_place(G._node_internal_index_col)
+    G.nodes = G.nodes.rename({"manual_index": G._node_internal_index_col})
+
+    # Run the lookup, checking we found the correct names (quick / naive check)
+    lookup = G._node_information_from_index(seek_indexes)
+    assert_series_equal(
+        lookup.get_column("name"),
+        pl.Series(should_find_names),
+        check_names=False,
+        check_dtypes=False,
+    )
+    # (Overkill) check that we are running the correct filter query internally.
+    assert_frame_equal(
+        lookup,
+        G.nodes.filter(pl.col(G._node_internal_index_col).is_in(seek_indexes)),
     )
