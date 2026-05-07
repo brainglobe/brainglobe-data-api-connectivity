@@ -146,7 +146,7 @@ class Connections:
         if self._node_internal_index_col in nodes:
             raise ValueError(
                 f"Heading '{self._node_internal_index_col}' must not be "
-                "present in the node metadata, as it is reserved"
+                "present in the node metadata, as it is reserved "
                 "for internal index referencing."
             )
 
