@@ -40,7 +40,7 @@ def test_node_index_lookup(
     expected_indexes: list[int],
 ) -> None:
     """Test lookup of graph-node indexes via node metadata."""
-    G = Connections([], node_data)
+    G = Connections(node_data, [])
     # Overwrite the assigned "indexes" from the graph with our own manual
     # indexes, so we can confirm lookup behaviour
     G.nodes.drop_in_place(G._node_internal_index_col)
