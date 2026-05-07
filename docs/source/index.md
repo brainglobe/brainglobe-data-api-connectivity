@@ -5,6 +5,7 @@
    :maxdepth: 2
    :caption: Contents:
 
+   neuro_to_math
    getting_started
 ```
 
