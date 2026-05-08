@@ -2,11 +2,6 @@ from collections.abc import Sequence
 
 import pandas as pd
 
-from brainglobe_data_api_connectivity.io.excel import (
-    get_col_ids,
-    get_row_ids,
-)
-
 
 def validate_matrix(
     matrix: pd.DataFrame, row_ids: Sequence[int], col_ids: Sequence[int]
@@ -28,11 +23,9 @@ def validate_matrix(
         )
 
 
-def check_ids(file_path, sheet_name, data_range, row_with_ids, col_with_ids):
+def check_ids(row_ids, col_ids):
     """Specific to this dataset, checks that row and col ids match and that
     they are a range from 1 to n."""
-    row_ids = get_row_ids(file_path, sheet_name, data_range, row_with_ids)
-    col_ids = get_col_ids(file_path, sheet_name, data_range, col_with_ids)
     if row_ids != col_ids:
         raise ValueError("Row and column IDs do not match.")
 

@@ -1,10 +1,12 @@
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from brainglobe_data_api_connectivity.io.excel import (
+    get_col_ids,
     get_df_from_excel,
+    get_row_ids,
 )
 from brainglobe_data_api_connectivity.io.validate_input import (
     check_ids,
@@ -33,10 +35,10 @@ if __name__ == "__main__":
     data_range = ("T8", "AFU841")
     info_range = ("A7", "S841")
 
-    file_path = os.path.join(data_folder, matrices)
+    file_path = Path(data_folder) / matrices
 
     metadata = "swansonDatasetS2 CNS CRs JHr1.xlsx"
-    metadata_file = os.path.join(data_folder, metadata)
+    metadata_file = Path(data_folder) / metadata
 
     # df = pd.read_excel(metadata_file)
     # df.to_csv(os.path.join(data_folder, "edge_metadata.csv"), index=False)
@@ -47,7 +49,10 @@ if __name__ == "__main__":
         matrix = get_df_from_excel(
             file_path, sheet_name=sheet, data_range=data_range
         )
-        row_ids, col_ids = check_ids(file_path, sheet, data_range, "P", 5)
+
+        row_ids = get_row_ids(file_path, sheet, data_range, "P")
+        col_ids = get_col_ids(file_path, sheet, data_range, 5)
+        check_ids(row_ids, col_ids)
         validate_matrix(matrix, row_ids, col_ids)
 
         # convert m to edge table
@@ -68,16 +73,14 @@ if __name__ == "__main__":
         )
 
         np.savetxt(
-            os.path.join(
-                data_folder, sheet.replace(" ", "_") + "_edge_table.csv"
-            ),
+            Path(data_folder) / f"{sheet.replace(' ', '_')}_edge_table.csv",
             edge_table,
             fmt="%d",
             delimiter=",",
         )
 
         info.to_csv(
-            os.path.join(data_folder, sheet.replace(" ", "_") + "_info.csv"),
+            Path(data_folder) / f"{sheet.replace(' ', '_')}_info.csv",
             index=False,
         )
 
