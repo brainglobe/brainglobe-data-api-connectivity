@@ -43,12 +43,11 @@ def validate_cell_reference(ref: str) -> None:
         raise ValueError(f"Invalid cell reference: {ref}")
 
 
-def split_cell_reference(ref: str) -> Tuple[int, int]:
-
+def cell_reference_to_indices(ref: str) -> Tuple[int, int]:
+    """Split a cell reference into zero-based column index and row number."""
     validate_cell_reference(ref)
     col_ref = "".join(filter(str.isalpha, ref))
     row_ref = "".join(filter(str.isdigit, ref))
-
     return column_reference_to_index(col_ref), int(row_ref)
 
 
@@ -72,8 +71,8 @@ def get_cell_range(
     if len(cell_range) != 2:
         raise ValueError("cell_range must contain two cell references.")
 
-    start_col, start_row = split_cell_reference(cell_range[0])
-    end_col, end_row = split_cell_reference(cell_range[1])
+    start_col, start_row = cell_reference_to_indices(cell_range[0])
+    end_col, end_row = cell_reference_to_indices(cell_range[1])
 
     return (start_col, end_col), (start_row, end_row)
 

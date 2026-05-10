@@ -1,9 +1,9 @@
 import pytest
 
 from brainglobe_data_api_connectivity.io.excel import (
+    cell_reference_to_indices,
     column_reference_to_index,
     get_cell_range,
-    split_cell_reference,
 )
 
 
@@ -31,7 +31,7 @@ def test_column_reference_to_index(label, expected):
 )
 def test_split_cell_reference(ref, expected):
     """Test splitting A1 references."""
-    assert split_cell_reference(ref) == expected
+    assert cell_reference_to_indices(ref) == expected
 
 
 @pytest.mark.parametrize(
@@ -51,7 +51,7 @@ def test_get_cell_range(cell_range, expected):
 def test_invalid_reference():
     """Test invalid references raise errors."""
     with pytest.raises(ValueError):
-        split_cell_reference("123")
+        cell_reference_to_indices("123")
 
     with pytest.raises(ValueError):
         get_cell_range(("A1",))
