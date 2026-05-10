@@ -1,5 +1,6 @@
 """Excel-related helpers."""
 
+import re
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -33,12 +34,20 @@ def get_df_from_excel(
     return df
 
 
+def validate_cell_reference(ref: str) -> None:
+    """Validate that a cell reference is letters A–Z followed by digits 0–9."""
+
+    pattern = r"^[A-Za-z]+[0-9]+$"
+
+    if not re.match(pattern, ref):
+        raise ValueError(f"Invalid cell reference: {ref}")
+
+
 def split_cell_reference(ref: str) -> Tuple[int, int]:
+
+    validate_cell_reference(ref)
     col_ref = "".join(filter(str.isalpha, ref))
     row_ref = "".join(filter(str.isdigit, ref))
-
-    if not col_ref or not row_ref:
-        raise ValueError(f"Invalid cell reference: {ref}")
 
     return column_reference_to_index(col_ref), int(row_ref)
 
