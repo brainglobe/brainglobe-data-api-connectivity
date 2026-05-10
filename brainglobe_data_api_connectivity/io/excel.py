@@ -65,11 +65,17 @@ def column_reference_to_index(label: str) -> int:
     return index - 1
 
 
+def validate_cell_range(cell_range: Tuple[str, str]) -> None:
+    """Validate that cell_range contains two cell references."""
+    if len(cell_range) != 2:
+        raise ValueError("cell_range must contain two cell references.")
+
+
 def get_cell_range(
     cell_range: Tuple[str, str],
 ) -> tuple[tuple[int, int], tuple[int, int]]:
-    if len(cell_range) != 2:
-        raise ValueError("cell_range must contain two cell references.")
+    """Convert two cell references into column and row index ranges."""
+    validate_cell_range(cell_range)
 
     start_col, start_row = cell_reference_to_indices(cell_range[0])
     end_col, end_row = cell_reference_to_indices(cell_range[1])
