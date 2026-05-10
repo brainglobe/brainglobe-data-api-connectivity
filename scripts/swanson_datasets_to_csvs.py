@@ -6,7 +6,7 @@ import pandas as pd
 from brainglobe_data_api_connectivity.io.excel import (
     get_col_ids,
     get_df_from_excel,
-    get_row_ids,
+    get_row_values,
 )
 from brainglobe_data_api_connectivity.io.validate_input import (
     check_ids,
@@ -50,7 +50,7 @@ if __name__ == "__main__":
             file_path, sheet_name=sheet, data_range=data_range
         )
 
-        row_ids = get_row_ids(file_path, sheet, data_range, "P")
+        row_ids = get_row_values(file_path, sheet, data_range, "P")
         col_ids = get_col_ids(file_path, sheet, data_range, 5)
         check_ids(row_ids, col_ids)
         validate_matrix(matrix, row_ids, col_ids)

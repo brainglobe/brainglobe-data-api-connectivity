@@ -83,14 +83,29 @@ def get_cell_range(
     return (start_col, end_col), (start_row, end_row)
 
 
-def get_row_ids(
+def get_row_values(
     file: Path,
-    sheet: str,
+    sheet: str | int | None,
     data_range: tuple[str, str],
     col_label: str,
 ) -> list[int]:
+    """Return values from a row range.
+
+    Args
+        file: Path to the Excel file.
+        sheet: Sheet name or index. If None, the first sheet is used.
+        data_range: Tuple of cell references defining the data range,
+            e.g. ("A1", "C5").
+        col_label: Excel column label (e.g. "A", "B", "AA") to extract values
+        from.
+
+    """
+    if sheet is None:
+        sheet = 0
+
     (_, _), (r0, r1) = get_cell_range(data_range)
     col = column_reference_to_index(col_label)
+
     return (
         pd.read_excel(
             file,

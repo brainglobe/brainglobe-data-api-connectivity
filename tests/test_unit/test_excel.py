@@ -1,8 +1,12 @@
+from pathlib import Path
+
+import pandas as pd
 import pytest
 
 from brainglobe_data_api_connectivity.io.excel import (
     cell_reference_to_indices,
     column_reference_to_index,
+    get_row_values,
     validate_cell_range,
     validate_cell_reference,
 )
@@ -103,3 +107,30 @@ def test_validate_cell_range(cell_range, error, match):
     else:
         with pytest.raises(error, match=match):
             validate_cell_range(cell_range)
+
+
+@pytest.fixture
+def excel_test_connectivity_matrix(tmp_path: Path):
+    """Create a realistic area–area connectivity matrix with labels in the
+    first row and first column, suitable for testing row/column extraction."""
+
+    df = pd.DataFrame(
+        [
+            ["area_1", 0, 1, 2, 3],
+            ["area_2", 1, 0, 2, 3],
+            ["area_3", 1, 2, 0, 3],
+            ["area_4", 9, 9, 9, 0],
+        ],
+        columns=["", "area_1", "area_2", "area_3", "area_4"],
+    )
+
+    file = tmp_path / "test_connectivity_matrix.xlsx"
+    df.to_excel(file, sheet_name="Sheet1", index=False, header=True)
+    return file
+
+
+def test_get_row_values_simple(excel_test_connectivity_matrix):
+    result = get_row_values(
+        excel_test_connectivity_matrix, "Sheet1", ("B2", "E5"), "A"
+    )
+    assert result == ["area_1", "area_2", "area_3", "area_4"]
