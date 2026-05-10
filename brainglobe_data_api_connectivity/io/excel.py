@@ -85,9 +85,9 @@ def get_cell_range(
 
 def get_row_values(
     file: Path,
-    sheet: str | int | None,
     data_range: tuple[str, str],
     col_label: str,
+    sheet: str | int | None = None,
 ) -> list[int]:
     """Return values from a row range.
 

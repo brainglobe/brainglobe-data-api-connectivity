@@ -111,8 +111,7 @@ def test_validate_cell_range(cell_range, error, match):
 
 @pytest.fixture
 def excel_test_connectivity_matrix(tmp_path: Path):
-    """Create a realistic area–area connectivity matrix with labels in the
-    first row and first column, suitable for testing row/column extraction."""
+    """dummy connectivity matrix in excel for testing."""
 
     df = pd.DataFrame(
         [
@@ -129,8 +128,33 @@ def excel_test_connectivity_matrix(tmp_path: Path):
     return file_path
 
 
-def test_get_row_values_simple(excel_test_connectivity_matrix):
+@pytest.mark.parametrize(
+    ["data_range", "col_label", "sheet", "expected"],
+    [
+        pytest.param(
+            ("B2", "E5"),
+            "A",
+            "Sheet1",
+            ["area_1", "area_2", "area_3", "area_4"],
+            id="row labels",
+        ),
+        pytest.param(
+            ("B2", "E5"),
+            "B",
+            None,
+            [0, 1, 1, 9],
+            id="values (sheet = None)",
+        ),
+    ],
+)
+def test_get_row_values(
+    excel_test_connectivity_matrix, data_range, col_label, sheet, expected
+):
+    """Test getting row values matching data range."""
     result = get_row_values(
-        excel_test_connectivity_matrix, "Sheet1", ("B2", "E5"), "A"
+        excel_test_connectivity_matrix,
+        data_range,
+        col_label,
+        sheet=sheet,
     )
-    assert result == ["area_1", "area_2", "area_3", "area_4"]
+    assert result == expected
