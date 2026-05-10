@@ -23,9 +23,8 @@ def validate_matrix(
         )
 
 
-def check_ids(row_ids, col_ids):
-    """Specific to this dataset, checks that row and col ids match and that
-    they are a range from 1 to n."""
+def check_ids(row_ids: list[int], col_ids: list[int]) -> None:
+    """Row and col ids should match and range from 1 to n"""
     if row_ids != col_ids:
         raise ValueError("Row and column IDs do not match.")
 
@@ -34,4 +33,3 @@ def check_ids(row_ids, col_ids):
         raise ValueError(
             f"Row IDs {row_ids} do not match expected {expected_ids}."
         )
-    return row_ids, col_ids
