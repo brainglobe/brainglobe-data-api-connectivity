@@ -124,9 +124,9 @@ def excel_test_connectivity_matrix(tmp_path: Path):
         columns=["", "area_1", "area_2", "area_3", "area_4"],
     )
 
-    file = tmp_path / "test_connectivity_matrix.xlsx"
-    df.to_excel(file, sheet_name="Sheet1", index=False, header=True)
-    return file
+    file_path = tmp_path / "test_connectivity_matrix.xlsx"
+    df.to_excel(file_path, sheet_name="Sheet1", index=False, header=True)
+    return file_path
 
 
 def test_get_row_values_simple(excel_test_connectivity_matrix):
