@@ -6,6 +6,7 @@ import pytest
 from brainglobe_data_api_connectivity.io.excel import (
     cell_reference_to_indices,
     column_reference_to_index,
+    get_col_values,
     get_row_values,
     validate_cell_range,
     validate_cell_reference,
@@ -136,14 +137,14 @@ def excel_test_connectivity_matrix(tmp_path: Path):
             "A",
             "Sheet1",
             ["area_1", "area_2", "area_3", "area_4"],
-            id="row labels",
+            id="row labels col A",
         ),
         pytest.param(
             ("B2", "E5"),
             "B",
             None,
             [0, 1, 1, 9],
-            id="values (sheet = None)",
+            id="values col B (sheet = None)",
         ),
     ],
 )
@@ -152,6 +153,38 @@ def test_get_row_values(
 ):
     """Test getting row values matching data range."""
     result = get_row_values(
+        excel_test_connectivity_matrix,
+        data_range,
+        col_label,
+        sheet=sheet,
+    )
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["data_range", "col_label", "sheet", "expected"],
+    [
+        pytest.param(
+            ("B2", "E5"),
+            1,
+            "Sheet1",
+            ["area_1", "area_2", "area_3", "area_4"],
+            id="col labels first row",
+        ),
+        pytest.param(
+            ("B2", "E5"),
+            2,
+            None,
+            [0, 1, 2, 3],
+            id="values second row (sheet = None)",
+        ),
+    ],
+)
+def test_get_col_values(
+    excel_test_connectivity_matrix, data_range, col_label, sheet, expected
+):
+    """Test getting col values matching data range."""
+    result = get_col_values(
         excel_test_connectivity_matrix,
         data_range,
         col_label,
