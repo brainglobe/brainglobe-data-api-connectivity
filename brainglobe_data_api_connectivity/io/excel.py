@@ -53,6 +53,7 @@ def split_cell_reference(ref: str) -> Tuple[int, int]:
 
 
 def column_reference_to_index(label: str) -> int:
+    """converts Excel column labels into numeric indices."""
     label = label.upper()
 
     if not label.isalpha():

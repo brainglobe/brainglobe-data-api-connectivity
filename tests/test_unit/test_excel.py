@@ -1,6 +1,7 @@
 import pytest
 
 from brainglobe_data_api_connectivity.io.excel import (
+    column_reference_to_index,
     validate_cell_reference,
 )
 
@@ -48,3 +49,20 @@ def test_validate_cell_reference(ref, error, error_message):
     else:
         with pytest.raises(error, match=error_message):
             validate_cell_reference(ref)
+
+
+@pytest.mark.parametrize(
+    ["cell_reference", "expected_index"],
+    [
+        ("A", 0),
+        ("Z", 25),
+        ("AA", 26),
+        ("AB", 27),
+        ("AZ", 51),
+        ("BA", 52),
+        ("ZZ", 701),
+    ],
+)
+def test_column_reference_to_index_valid(cell_reference, expected_index):
+    """Test correct conversion of Excel column label to indix."""
+    assert column_reference_to_index(cell_reference) == expected_index
