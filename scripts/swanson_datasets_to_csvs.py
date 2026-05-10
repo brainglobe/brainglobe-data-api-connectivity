@@ -40,8 +40,8 @@ if __name__ == "__main__":
     metadata = "swansonDatasetS2 CNS CRs JHr1.xlsx"
     metadata_file = Path(data_folder) / metadata
 
-    # df = pd.read_excel(metadata_file)
-    # df.to_csv(os.path.join(data_folder, "edge_metadata.csv"), index=False)
+    df = pd.read_excel(metadata_file)
+    df.to_csv(Path(data_folder) / "edge_metadata.csv", index=False)
 
     for sheet in matrix_sheets:
         if sheet not in pd.ExcelFile(file_path).sheet_names:
