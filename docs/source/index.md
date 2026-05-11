@@ -9,7 +9,7 @@
 ```
 
 This package acts as an interface between neurological region-connectivity data and network (graph) analysis.
-This allows us to phrase questions such as "what is the minimum travel time for a signal from region A to reach region B" as purely mathematical questions ("find the path between region A and region B that minimises the signal travel time") which can be solved using well-established network algorithms.
+This allows us to phrase questions such as "how many direct routes are there from region A to region B?" as purely mathematical tasks ("find all non-cyclic paths between region A and region B, sorted by total connection strength") which can be solved using well-established network algorithms.
 
 ## Connectivity Data Input Format
 
