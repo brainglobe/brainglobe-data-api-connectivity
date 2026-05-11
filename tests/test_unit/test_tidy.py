@@ -1,7 +1,10 @@
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
 from brainglobe_data_api_connectivity.utils.tidy import (
+    consolidate_duplicates,
     rename_columns,
 )
 
@@ -28,3 +31,55 @@ def test_rename_columns(name, expected):
     """Test whether rename_columns works as expected."""
     renamed = rename_columns(pd.Index([name]))[0]
     assert renamed == expected
+
+
+@pytest.mark.parametrize(
+    ["files", "error"],
+    [
+        pytest.param(
+            {
+                "a_info.csv": pd.DataFrame({"x": [1, 2]}),
+                "b_info.csv": pd.DataFrame({"x": [1, 2]}),
+            },
+            None,
+            id="duplicates",
+        ),
+        pytest.param(
+            {
+                "a_info.csv": pd.DataFrame({"x": [1, 2]}),
+                "b_info.csv": pd.DataFrame({"x": [9, 9]}),
+            },
+            ValueError,
+            id="mismatched files",
+        ),
+    ],
+)
+def test_consolidate_duplicates(tmp_path: Path, files, error):
+    """Test consolidation of duplicates
+
+    consolidate_duplicates should
+    - keep one file with the right name and content
+    - raise an error for mismatched files."""
+
+    for name, df in files.items():
+        df.to_csv(tmp_path / name, index=False)
+
+    pattern = "*info.csv"
+    target_name = "node_info.csv"
+
+    if error is not None:
+        with pytest.raises(error):
+            consolidate_duplicates(pattern, tmp_path, target_name)
+        return
+
+    else:
+        consolidate_duplicates(pattern, tmp_path, target_name)
+
+        remaining = sorted(p.name for p in tmp_path.glob(pattern))
+        assert len(remaining) == 1
+        assert remaining == [target_name]
+
+        content = pd.read_csv(tmp_path / target_name)
+        expected = pd.DataFrame({"x": [1, 2]})
+
+        assert content.equals(expected)

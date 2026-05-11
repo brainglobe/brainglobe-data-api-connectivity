@@ -17,7 +17,7 @@ from brainglobe_data_api_connectivity.utils.convert import (
     lookup_node_index,
 )
 from brainglobe_data_api_connectivity.utils.tidy import (
-    consolidate_info_files,
+    consolidate_duplicates,
     rename_columns,
 )
 
@@ -84,6 +84,9 @@ if __name__ == "__main__":
             index=False,
         )
 
-    consolidate_info_files(data_folder)
-
-    pass
+    # Consolidate duplicate info files
+    consolidate_duplicates(
+        pattern="*_info.csv",
+        folder=data_folder,
+        output_name="node_info.csv",
+    )

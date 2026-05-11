@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -25,32 +25,38 @@ def rename_columns(columns: pd.Index) -> pd.Index:
     return pd.Index(cleaned)
 
 
-def consolidate_info_files(data_folder: str) -> None:
-    """Load all info files and check whether they are the same.
-    Remove duplicates and rename the first one to simply info.csv.
+def consolidate_duplicates(
+    pattern: str,
+    folder: str | Path,
+    output_name: str,
+) -> Path | None:
+    """Remove duplicate files.
+
+    - find files matching a pattern
+    - ensure they are identical
+    - keep one under a new name.
     """
+    folder = Path(folder)
 
-    info_path = os.path.join(data_folder, "node_info.csv")
-    if os.path.exists(info_path):
-        os.remove(info_path)
+    files = sorted(folder.glob(pattern))
+    if not files:
+        return None
 
-    info_files = [f for f in os.listdir(data_folder) if f.endswith("info.csv")]
-    for i in range(len(info_files)):
-        for j in range(i + 1, len(info_files)):
-            info_i = pd.read_csv(os.path.join(data_folder, info_files[i]))
-            info_j = pd.read_csv(os.path.join(data_folder, info_files[j]))
-            if not info_i.equals(info_j):
+    target = folder / output_name
+    if target.exists():
+        target.unlink()
+
+    # verify content of all files match
+    for i in range(len(files)):
+        for j in range(i + 1, len(files)):
+            if not pd.read_csv(files[i]).equals(pd.read_csv(files[j])):
                 raise ValueError(
-                    "Info files {0} and {1} do not match.".format(
-                        info_files[i], info_files[j]
-                    )
+                    f"Files {files[i].name} and {files[j].name} do not match."
                 )
 
-    os.rename(
-        os.path.join(data_folder, info_files[0]),
-        os.path.join(data_folder, "node_info.csv"),
-    )
+    # consolidate
+    files[0].rename(target)
+    for f in files[1:]:
+        f.unlink()
 
-    for f in info_files:
-        if f != info_files[0]:
-            os.remove(os.path.join(data_folder, f))
+    return target
