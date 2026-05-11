@@ -16,10 +16,10 @@ def rename_columns(columns: pd.Index) -> pd.Index:
     cleaned = (
         columns.str.lower()
         .str.replace(r"[^a-z0-9]+", "_", regex=True)
-        .str.replace(r"_+", "_", regex=True)  # collapse multiple _
         .str.replace(
             r"^(\d+)([a-z0-9_]+)$", r"\2_\1", regex=True
         )  # move leading digits to the end
+        .str.replace(r"_+", "_", regex=True)  # collapse multiple _
         .str.strip("_")  # trim any underscores from start or end
     )
     return pd.Index(cleaned)

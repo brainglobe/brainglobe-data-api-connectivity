@@ -9,8 +9,8 @@ from brainglobe_data_api_connectivity.utils.tidy import (
 @pytest.mark.parametrize(
     ["name", "expected"],
     [
-        pytest.param("first name", "first_name", id="space"),
-        pytest.param("Age\nWeeks", "age_weeks", id="newline"),
+        pytest.param("blank space", "blank_space", id="space"),
+        pytest.param("new\nline", "new_line", id="newline"),
         pytest.param("CAPITALS", "capitals", id="capitals"),
         pytest.param(
             "#-£invalid-$%^&(chars[}*.@", "invalid_chars", id="invalid chars"
@@ -21,6 +21,7 @@ from brainglobe_data_api_connectivity.utils.tidy import (
         pytest.param(
             "___many__underscores___", "many_underscores", id="underscores"
         ),
+        pytest.param("5___mix.£d tHiNg$___", "mix_d_thing_5", id="mixed"),
     ],
 )
 def test_rename_columns(name, expected):
