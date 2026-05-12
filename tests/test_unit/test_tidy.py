@@ -39,6 +39,13 @@ def test_rename_columns(name, expected):
         pytest.param(
             {
                 "a_info.csv": pd.DataFrame({"x": [1, 2]}),
+            },
+            None,
+            id="single file",
+        ),
+        pytest.param(
+            {
+                "a_info.csv": pd.DataFrame({"x": [1, 2]}),
                 "b_info.csv": pd.DataFrame({"x": [1, 2]}),
             },
             None,
