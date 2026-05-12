@@ -73,7 +73,7 @@ templates_path = ["_templates"]
 # Sphinx gallery configuration settings
 sphinx_gallery_conf = {
     "examples_dirs": "examples",
-    "gallery_dirs": "_gallery_examples",
+    "gallery_dirs": "./_gallery_examples",
 }
 
 # Automatically generate stub pages for API
