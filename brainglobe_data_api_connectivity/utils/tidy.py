@@ -38,13 +38,13 @@ def consolidate_duplicates(
     """
     folder = Path(folder)
 
-    files = sorted(folder.glob(pattern))
-    if not files:
-        return None
-
     target = folder / output_name
     if target.exists():
         target.unlink()
+
+    files = sorted(folder.glob(pattern))
+    if not files:
+        return None
 
     # verify content of all files match
     for i in range(len(files)):

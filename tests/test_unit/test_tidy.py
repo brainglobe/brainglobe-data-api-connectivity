@@ -59,6 +59,15 @@ def test_rename_columns(name, expected):
             ValueError,
             id="mismatched files",
         ),
+        pytest.param(
+            {
+                "a_info.csv": pd.DataFrame({"x": [1, 2]}),
+                "b_info.csv": pd.DataFrame({"x": [1, 2]}),
+                "node_info.csv": pd.DataFrame({"x": [1, 2]}),
+            },
+            None,
+            id="duplicates + node_info file",
+        ),
     ],
 )
 def test_consolidate_duplicates(tmp_path: Path, files, error):

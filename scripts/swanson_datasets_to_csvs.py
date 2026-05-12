@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     # Consolidate duplicate info files
     consolidate_duplicates(
-        pattern="*modules_info.csv",
+        pattern="*_info.csv",
         folder=data_folder,
         output_name="node_info.csv",
     )
