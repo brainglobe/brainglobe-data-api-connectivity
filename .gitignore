@@ -58,6 +58,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/source/examples/_gallery_examples
 
 # MkDocs documentation
 /site/

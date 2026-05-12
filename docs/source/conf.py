@@ -42,6 +42,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinx_gallery.gen_gallery",
     "sphinx_sitemap",
     "myst_parser",
 ]
@@ -68,6 +69,12 @@ myst_heading_anchors = 3
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+
+# Sphinx gallery configuration settings
+sphinx_gallery_conf = {
+    "examples_dirs": "examples",
+    "gallery_dirs": "_gallery_examples",
+}
 
 # Automatically generate stub pages for API
 autosummary_generate = True
