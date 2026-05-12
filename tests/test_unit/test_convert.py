@@ -1,7 +1,9 @@
 import pandas as pd
 import pytest
 
-from brainglobe_data_api_connectivity.utils.convert import lookup_node_index
+from brainglobe_data_api_connectivity.utils.convert import (
+    lookup_and_morph_node_index,
+)
 
 morph_dict = {"one": 1, "two": 2}
 
@@ -34,11 +36,11 @@ def test_lookup_node_index(info2morph, region_id, error, expected_idx):
 
     if error:
         with pytest.raises(error):
-            idx = lookup_node_index(
+            idx = lookup_and_morph_node_index(
                 region_info, info, region_to_node_heading, morph_value
             )
     else:
-        idx = lookup_node_index(
+        idx = lookup_and_morph_node_index(
             region_info, info, region_to_node_heading, morph_value
         )
         assert idx == expected_idx
