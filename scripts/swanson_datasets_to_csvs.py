@@ -13,23 +13,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from brainglobe_data_api_connectivity.io.excel import (
-    get_col_values,
-    get_df_from_excel,
-    get_row_values,
-)
-from brainglobe_data_api_connectivity.io.validate_input import (
-    check_ids,
-    validate_matrix,
-)
-from brainglobe_data_api_connectivity.utils.convert import (
-    convert_matrix_to_edge_table,
-    lookup_and_morph_node_index,
-)
-from brainglobe_data_api_connectivity.utils.tidy import (
-    consolidate_duplicates,
-    rename_columns,
-)
+from brainglobe_data_api_connectivity.io import excel, validate_input
+from brainglobe_data_api_connectivity.utils import convert, tidy
 
 morph_dict = {"one": 1, "two": 2}
 
@@ -39,63 +24,70 @@ def _morph(region_side: str) -> int:
 
 
 if __name__ == "__main__":
-    data_folder = "data"
-    matrices = "swansonDatasetS3 CNS data matrices JHr1.xlsx"
+    data_folder = Path("data")
+
+    # File paths
+    matrix_file = data_folder / "swansonDatasetS3 CNS data matrices JHr1.xlsx"
+    metadata_file = data_folder / "swansonDatasetS2 CNS CRs JHr1.xlsx"
+
+    # Sheet and range definitions
     matrix_sheets = [f"CNS2{sex} modules" for sex in ["m", "f"]]
     data_range = ("T8", "AFU841")
     info_range = ("A7", "S841")
 
-    file_path = Path(data_folder) / matrices
+    #  MRCC (multiresolution consensus clustering number)
+    mrcc_col = "P"  # MRCC
+    mrcc_row = 5  # MRCC
 
-    metadata = "swansonDatasetS2 CNS CRs JHr1.xlsx"
-    metadata_file = Path(data_folder) / metadata
-
-    df = pd.read_excel(metadata_file)
-    df.to_csv(Path(data_folder) / "edge_metadata.csv", index=False)
+    # Save metadata CSV
+    pd.read_excel(metadata_file).to_csv(
+        data_folder / "edge_metadata.csv", index=False
+    )
 
     for sheet in matrix_sheets:
-        if sheet not in pd.ExcelFile(file_path).sheet_names:
-            raise ValueError(f"Sheet {sheet} not found in {file_path}.")
-        matrix = get_df_from_excel(
-            file_path, sheet_name=sheet, data_range=data_range
+        # Load and validate matrix and ids
+        matrix = excel.get_df_from_excel(matrix_file, sheet, data_range)
+        mrcc_row_values = excel.get_row_values(
+            matrix_file, data_range, mrcc_col, sheet
+        )
+        mrcc_col_values = excel.get_col_values(
+            matrix_file, data_range, mrcc_row, sheet
+        )
+        validate_input.check_ids(mrcc_row_values, mrcc_col_values)
+        validate_input.validate_matrix(
+            matrix, mrcc_row_values, mrcc_col_values
         )
 
-        row_ids = get_row_values(file_path, data_range, "P", sheet)
-        col_ids = get_col_values(file_path, data_range, 5, sheet)
-        check_ids(row_ids, col_ids)
-        validate_matrix(matrix, row_ids, col_ids)
+        # Convert matrix to edge table
+        edge_table = convert.convert_matrix_to_edge_table(matrix)
 
-        # convert m to edge table
-        edge_table = convert_matrix_to_edge_table(matrix)
-
-        info = get_df_from_excel(
-            file_path, sheet_name=sheet, data_range=info_range, header=0
+        # Load and tidy node info
+        info = excel.get_df_from_excel(
+            matrix_file, sheet_name=sheet, data_range=info_range, header=0
         )
         info.rename(columns={info.columns[0]: "Side"}, inplace=True)
-        info.columns = rename_columns(info.columns)
+        info.columns = tidy.rename_columns(info.columns)
 
+        # Morph region identifiers
         region_info = {"region_side": "one", "region_abbr": "STN"}
         region_to_node_heading = {"region_side": "side", "region_abbr": "abbr"}
         morph_value = {"region_side": _morph}
-
-        idx = lookup_and_morph_node_index(
+        convert.lookup_and_morph_node_index(
             region_info, info, region_to_node_heading, morph_value
         )
 
+        # Save outputs
+        sheet_tag = sheet.replace(" ", "_")
         np.savetxt(
-            Path(data_folder) / f"{sheet.replace(' ', '_')}_edge_table.csv",
+            data_folder / f"{sheet_tag}_edge_table.csv",
             edge_table,
             fmt="%d",
             delimiter=",",
         )
-
-        info.to_csv(
-            Path(data_folder) / f"{sheet.replace(' ', '_')}_info.csv",
-            index=False,
-        )
+        info.to_csv(data_folder / f"{sheet_tag}_info.csv", index=False)
 
     # Consolidate duplicate info files
-    consolidate_duplicates(
+    tidy.consolidate_duplicates(
         pattern="*_info.csv",
         folder=data_folder,
         output_name="node_info.csv",
