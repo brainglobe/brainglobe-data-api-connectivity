@@ -14,7 +14,7 @@ from brainglobe_data_api_connectivity.io.validate_input import (
 )
 from brainglobe_data_api_connectivity.utils.convert import (
     convert_matrix_to_edge_table,
-    lookup_node_index,
+    lookup_and_morph_node_index,
 )
 from brainglobe_data_api_connectivity.utils.tidy import (
     consolidate_duplicates,
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         region_to_node_heading = {"region_side": "side", "region_abbr": "abbr"}
         morph_value = {"region_side": _morph}
 
-        idx = lookup_node_index(
+        idx = lookup_and_morph_node_index(
             region_info, info, region_to_node_heading, morph_value
         )
 
