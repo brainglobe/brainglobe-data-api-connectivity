@@ -1,3 +1,13 @@
+"""Extracts, validates, and reformats data from Excel files into
+standardised CSVs required for API input.
+
+This script reads the connectivity matrices and associated metadata from the
+Excel sources, validates that the data matches the expected structure, and
+outputs standardised metadata and edge‑table CSV files. The CSVs load more
+quickly, are easier to work with, and can be regenerated reliably whenever the
+Excel files are updated.
+"""
+
 from pathlib import Path
 
 import numpy as np

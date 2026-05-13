@@ -1,3 +1,5 @@
+"""Tidy excel input data"""
+
 from pathlib import Path
 
 import pandas as pd
@@ -6,12 +8,10 @@ import pandas as pd
 def rename_columns(columns: pd.Index) -> pd.Index:
     """Rename column names.
 
-    Column names can only contain
+    Changes column names so they never start with a diget and can only contain
      - lowercase characters a-z
      - digits 0-9
      - underscores
-
-    Names cannot start with a digit.
     """
     cleaned = (
         columns.str.lower()
@@ -30,11 +30,22 @@ def consolidate_duplicates(
     folder: str | Path,
     output_name: str,
 ) -> Path | None:
-    """Remove duplicate files.
+    """Consolidate duplicate CSV files in a folder.
 
-    - find files matching a pattern
-    - ensure they are identical
-    - keep one under a new name.
+    Finds all files matching a given pattern, verifies they are duplicates,
+    and replaces them with a single file saved as `output_name`.
+
+    Parameters
+    pattern: str
+        Pattern used find duplicates (e.g. '*.csv').
+    folder: str | Path
+        Directory in which to search for matching files.
+    output_name: str
+        Name of the consolidated output file to create.
+
+    Returns
+    target: Path | None
+        Path to the consolidated file, or None if no files matched.
     """
     folder = Path(folder)
 

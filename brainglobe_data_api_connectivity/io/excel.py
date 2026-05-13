@@ -1,4 +1,4 @@
-"""Excel-related helpers."""
+"""Excel-related helper functions."""
 
 import re
 from pathlib import Path
