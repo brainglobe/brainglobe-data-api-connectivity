@@ -90,13 +90,13 @@ def test_cell_reference_to_indices(ref, expected_split_ref):
         pytest.param(
             ("A1",),
             ValueError,
-            r"cell_range must contain two cell references",
+            r"Cell range must contain two cell references",
             id="invalid (1 cell ref)",
         ),
         pytest.param(
             ("A1", "B2", "C3"),
             ValueError,
-            r"cell_range must contain two cell references",
+            r"Cell range must contain two cell references",
             id="invalid (3 cell refs",
         ),
     ],
