@@ -10,7 +10,10 @@
 ```
 
 This package acts as an interface between neurological region-connectivity data and network (graph) analysis.
-This allows us to phrase questions such as "how many direct routes are there from region A to region B?" as purely mathematical tasks ("find all non-cyclic paths between region A and region B, sorted by total connection strength") which can be solved using well-established network algorithms.
+Connectivity data can be efficiently represented as a [network](./neuro_to_math.md), which means that common questions one want to run as part of an analysis of such data can be handled efficiently and quickly if one can formulate the corresponding mathematical questions and structures.
+The purpose of the package is to allow users to ask these neurologically-motivated questions and receive the corresponding answers in an intuitive and helpful format; whilst in the background handling the mathematical representation so the user does not need to concern themselves with translating back and forth.
+
+For example, the question of "what is the shortest path between brain areas A and B that passes through region C?" can be phrased as the purely mathematical task of "determine the shortest path between region A and region C, and then the shortest path between region C and region B, and concatenate them", which can be handled using well-established network algorithms.
 
 ## Connectivity Data Input Format
 
