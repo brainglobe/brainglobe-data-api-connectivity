@@ -5,7 +5,6 @@
    :maxdepth: 2
    :caption: Contents:
 
-   getting_started
    neuro_to_math
    _gallery_examples/index
 ```
