@@ -65,7 +65,7 @@ def column_reference_to_index(label: str) -> int:
 def validate_cell_range(cell_range: Tuple[str, str]) -> None:
     """Validate that cell_range contains two cell references."""
     if len(cell_range) != 2:
-        raise ValueError("cell_range must contain two cell references.")
+        raise ValueError("Cell range must contain two cell references.")
 
 
 def get_cell_range(
