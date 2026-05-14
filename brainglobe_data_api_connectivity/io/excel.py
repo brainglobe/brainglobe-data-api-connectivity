@@ -55,9 +55,6 @@ def column_reference_to_index(label: str) -> int:
     """converts Excel column labels into numeric indices."""
     label = label.upper()
 
-    if not label.isalpha():
-        raise ValueError(f"Invalid column label: {label}")
-
     index = 0
     for char in label:
         index = index * 26 + (ord(char) - ord("A") + 1)
