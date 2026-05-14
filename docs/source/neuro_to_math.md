@@ -27,7 +27,7 @@ The network that represents a particular dataset can be fully described simply b
 This is what our API expects to receive as an input.
 An edge table is just a three-column CSV file, where each row specifies one connection in the form
 
-```csv
+```text
 source node, target node, connection strength
 ```
 
@@ -69,7 +69,7 @@ Suppose we have then identified the following information about the connections 
 
 Our connectivity information can be used to construct our edge-table CSV file:
 
-```csv
+```text
 l-a, l-b, 1.0
 l-a, r-a, 0.5
 l-b, r-a, 0.5
@@ -128,3 +128,5 @@ If the (brain)-regions are provided with unique identifiers, these same unique i
 However, in practice the package prefers the use of integer indexes to identify the nodes, rather than names or abbreviations that connectivity data may prefer.
 Where this is important, the package keeps a record of the correspondence between "internal indexes" for the nodes and the user-facing identifiers for the brain regions they represent.
 :::
+
+FIXME: add notation for paths, etc.
