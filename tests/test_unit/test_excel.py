@@ -113,7 +113,7 @@ def test_validate_cell_range(cell_range, error, match):
 
 @pytest.fixture
 def excel_test_connectivity_matrix(tmp_path: Path):
-    """dummy connectivity matrix in excel for testing."""
+    """Simple connectivity matrix for use in testing excel conversion."""
 
     df = pd.DataFrame(
         [
