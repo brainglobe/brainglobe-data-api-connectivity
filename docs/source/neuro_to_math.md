@@ -130,7 +130,9 @@ Where this is important, the package keeps a record of the correspondence betwee
 :::
 
 In practice, the API relies on the [`rustworkx`](https://www.rustworkx.org/) library for all network-related queries.
-Connectivity data is represented by a [`PyDiGraph` class](https://www.rustworkx.org/apiref/rustworkx.PyDiGraph.html), which is exposed through the [`Connections.network`](FIXME) attribute to allow for flexible querying of the network structure if specialised analyses are required.
+Connectivity data is represented by a [`PyDiGraph` class](https://www.rustworkx.org/apiref/rustworkx.PyDiGraph.html), which is exposed through the `Connections.network` attribute to allow for flexible querying of the network structure if specialised analyses are required.
+
+<!-- FIXME: add API link for Connections.network -->
 
 The API also separates the "metadata" concerning the nodes/regions and edges/connections from the underlying network object itself.
 As such, the nodes in the `.network` use integer indexing, which is referred to as their "internal indexes".
