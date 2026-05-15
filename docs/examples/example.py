@@ -1,6 +1,8 @@
 """
-A basic example
-===============
+.. _basic_example:
+
+A basic example.
+================
 
 Introductory text.
 
