@@ -106,7 +106,7 @@ In our example, we have excluded the `r-b` to `l-b` connection on the grounds of
 Note that a connection being excluded from the edge table (and thus the network) has **different implications** to including a connection between two regions with a strength of 0.
 :::
 
-## Mathematical Details
+## Mathematical Details and Implementation
 
 Whilst we can get by with a colloquial description of networks, in some places it will be necessary for us to use a more mathematical description of these objects.
 We aim to set a standard for our notation - and conventions - in this section.
@@ -129,4 +129,10 @@ However, in practice the package prefers the use of integer indexes to identify 
 Where this is important, the package keeps a record of the correspondence between "internal indexes" for the nodes and the user-facing identifiers for the brain regions they represent.
 :::
 
-FIXME: add notation for paths, etc.
+In practice, the API relies on the [`rustworkx`](https://www.rustworkx.org/) library for all network-related queries.
+Connectivity data is represented by a [`PyDiGraph` class](https://www.rustworkx.org/apiref/rustworkx.PyDiGraph.html), which is exposed through the [`Connections.network`](FIXME) attribute to allow for flexible querying of the network structure if specialised analyses are required.
+
+The API also separates the "metadata" concerning the nodes/regions and edges/connections from the underlying network object itself.
+As such, the nodes in the `.network` use integer indexing, which is referred to as their "internal indexes".
+These internal indexes are appended as a column to the node metadata, so there is a means of translating between the neuroscientific information about a brain region and its abstract representation.
+Several functions also exist to aid in obtaining a selection of nodes by matching metadata criteria, and vice-versa.
