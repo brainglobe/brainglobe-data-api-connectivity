@@ -9,6 +9,7 @@
 import os
 import sys
 from importlib.metadata import version as get_version
+from pathlib import Path
 
 # Used when building API docs, put the dependencies
 # of any class you are documenting here
@@ -72,7 +73,7 @@ templates_path = ["_templates"]
 
 # Sphinx gallery configuration settings
 sphinx_gallery_conf = {
-    "examples_dirs": "examples",
+    "examples_dirs": Path(__file__).parent / "../examples",
     "gallery_dirs": "./_gallery_examples",
 }
 
