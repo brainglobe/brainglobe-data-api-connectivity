@@ -17,9 +17,9 @@ def _test_morph(region_side: str) -> int:
 @pytest.mark.parametrize(
     ["info2morph", "region_id", "error", "error_message", "expected_idx"],
     [
-        pytest.param("one", "Area1", None, 0),
-        pytest.param("two", "Area1", None, 1),
-        pytest.param("one", "Area2", None, 2),
+        pytest.param("one", "Area1", None, None, 0),
+        pytest.param("two", "Area1", None, None, 1),
+        pytest.param("one", "Area2", None, None, 2),
         pytest.param(
             "two",
             "Area2",
