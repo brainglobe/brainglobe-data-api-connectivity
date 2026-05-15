@@ -5,7 +5,7 @@ from collections.abc import Sequence
 import pandas as pd
 
 
-def validate_matrix(
+def validate_adjacency_matrix(
     matrix: pd.DataFrame, row_ids: Sequence[int], col_ids: Sequence[int]
 ) -> None:
     """Checks whether matrix has expected number of columns and rows."""

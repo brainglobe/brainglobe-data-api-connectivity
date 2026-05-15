@@ -5,7 +5,7 @@ import pytest
 
 from brainglobe_data_api_connectivity.io.validate_input import (
     check_ids,
-    validate_matrix,
+    validate_adjacency_matrix,
 )
 
 
@@ -49,10 +49,10 @@ from brainglobe_data_api_connectivity.io.validate_input import (
 )
 def test_validate_matrix_value(matrix, row_ids, col_ids, error):
     if error is None:
-        validate_matrix(matrix, row_ids, col_ids)
+        validate_adjacency_matrix(matrix, row_ids, col_ids)
     else:
         with pytest.raises(type(error), match=re.escape(str(error))):
-            validate_matrix(matrix, row_ids, col_ids)
+            validate_adjacency_matrix(matrix, row_ids, col_ids)
 
 
 @pytest.mark.parametrize(

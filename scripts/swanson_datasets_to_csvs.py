@@ -78,7 +78,7 @@ if __name__ == "__main__":
         )
 
         validate_input.check_ids(mrcc_row_values, mrcc_col_values)
-        validate_input.validate_matrix(
+        validate_input.validate_adjacency_matrix(
             matrix, mrcc_row_values, mrcc_col_values
         )
 
