@@ -6,9 +6,11 @@ import pandas as pd
 
 
 def rename_columns(columns: pd.Index) -> pd.Index:
-    """Rename column names.
+    """Standardise DataFrame column names.
 
-    Changes column names so they never start with a diget and can only contain
+    Returns a new index for the columns.
+
+    Column names should never start with a diget and can only contain
      - lowercase characters a-z
      - digits 0-9
      - underscores
