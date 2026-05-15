@@ -8,6 +8,7 @@ from brainglobe_data_api_connectivity.io.excel import (
     column_reference_to_index,
     get_col_values,
     get_row_values,
+    normalise_index_range,
     validate_cell_range,
     validate_cell_reference,
 )
@@ -191,3 +192,28 @@ def test_get_col_values(
         sheet=sheet,
     )
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["start", "end", "expected"],
+    [
+        pytest.param(
+            (3, 1), (1, 3), ((1, 1), (3, 3)), id="top-right, bottom-left"
+        ),
+        pytest.param(
+            (1, 3), (3, 1), ((1, 1), (3, 3)), id="bottom-left, top-right"
+        ),
+        pytest.param(
+            (3, 3), (1, 1), ((1, 1), (3, 3)), id="bottom-right, top-left"
+        ),
+        pytest.param(
+            (1, 1),
+            (3, 3),
+            ((1, 1), (3, 3)),
+            id="already normal",
+        ),
+    ],
+)
+def test_normalise_index_range(start, end, expected):
+    """Indices shouldalways be returned in top‑left to bottom‑right order."""
+    assert normalise_index_range(start, end) == expected

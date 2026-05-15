@@ -62,6 +62,28 @@ def column_reference_to_index(label: str) -> int:
     return index - 1
 
 
+def normalise_index_range(
+    start: tuple[int, int],
+    end: tuple[int, int],
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Normalise two (col, row) index pairs to top-left → bottom-right.
+
+    Examples:
+        ((3, 1), (1, 3)) becomes ((1, 1), (3, 3))
+        ((1, 3), (3, 1)) becomes ((1, 1), (3, 3))
+        ((3, 3), (1, 1)) becomes ((1, 1), (3, 3))
+        ((1, 1), (3, 3)) stays ((1, 1), (3, 3))
+    """
+    (col_a, row_a), (col_b, row_b) = start, end
+
+    min_col = min(col_a, col_b)
+    max_col = max(col_a, col_b)
+    min_row = min(row_a, row_b)
+    max_row = max(row_a, row_b)
+
+    return (min_col, min_row), (max_col, max_row)
+
+
 def validate_cell_range(cell_range: Tuple[str, str]) -> None:
     """Validate that cell_range contains two cell references."""
     if len(cell_range) != 2:
@@ -74,8 +96,12 @@ def get_cell_range(
     """Convert two cell references into column and row index ranges."""
     validate_cell_range(cell_range)
 
-    start_col, start_row = cell_reference_to_indices(cell_range[0])
-    end_col, end_row = cell_reference_to_indices(cell_range[1])
+    start = cell_reference_to_indices(cell_range[0])
+    end = cell_reference_to_indices(cell_range[1])
+
+    (start_col, start_row), (end_col, end_row) = normalise_index_range(
+        start, end
+    )
 
     return (start_col, end_col), (start_row, end_row)
 
