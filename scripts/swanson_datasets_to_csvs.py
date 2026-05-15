@@ -16,19 +16,16 @@ import pandas as pd
 from brainglobe_data_api_connectivity.io import excel, validate_input
 from brainglobe_data_api_connectivity.utils import convert, tidy
 
-morph_dict = {"one": 1, "two": 2}
-
-
-def _morph(region_side: str) -> int:
-    return morph_dict[region_side]
-
+EDGE_INFO_MORPH_DICT = {
+    "side": {"one": int(1), "two": int(2), "left": int(1), "right": int(2)}
+}
 
 if __name__ == "__main__":
     data_folder = Path("data")
 
     # File paths
     matrix_file = data_folder / "swansonDatasetS3 CNS data matrices JHr1.xlsx"
-    metadata_file = data_folder / "swansonDatasetS2 CNS CRs JHr1.xlsx"
+    edge_information_file = data_folder / "swansonDatasetS2 CNS CRs JHr1.xlsx"
 
     # Sheet and range definitions
     matrix_sheets = [f"CNS2{sex} modules" for sex in ["m", "f"]]
@@ -39,10 +36,20 @@ if __name__ == "__main__":
     mrcc_col = "P"  # MRCC
     mrcc_row = 5  # MRCC
 
-    # Save metadata CSV
-    pd.read_excel(metadata_file).to_csv(
-        data_folder / "edge_metadata.csv", index=False
-    )
+    # Clean and save edge_information CSV
+    edge_info = pd.read_excel(edge_information_file, header=[0, 1])
+    edge_info.columns = edge_info.columns.map(
+        lambda x: "_".join([str(i) for i in x if "Unnamed:" not in i])
+    )  # combine multi-index headers
+    edge_info.columns = tidy.rename_columns(edge_info.columns)
+
+    # different `region_side` labels are used ("one" "two" / "left" "right")
+    # mapping on `node_info` sides 1 and 2
+    morph_dict = EDGE_INFO_MORPH_DICT["side"]
+
+    for col in [c for c in edge_info.columns if "side" in c]:
+        edge_info[col] = edge_info[col].map(morph_dict)
+    edge_info.to_csv(data_folder / "edge_info.csv", index=False)
 
     for sheet in matrix_sheets:
         # Load and validate matrix and ids
@@ -68,14 +75,6 @@ if __name__ == "__main__":
         info.rename(columns={info.columns[0]: "Side"}, inplace=True)
         info.columns = tidy.rename_columns(info.columns)
 
-        # Morph region identifiers
-        region_info = {"region_side": "one", "region_abbr": "STN"}
-        region_to_node_heading = {"region_side": "side", "region_abbr": "abbr"}
-        morph_value = {"region_side": _morph}
-        convert.lookup_and_morph_node_index(
-            region_info, info, region_to_node_heading, morph_value
-        )
-
         # Save outputs
         sheet_tag = sheet.replace(" ", "_")
         np.savetxt(
@@ -88,7 +87,7 @@ if __name__ == "__main__":
 
     # Consolidate duplicate info files
     tidy.consolidate_duplicates(
-        pattern="*_info.csv",
+        pattern="[!edge]*_info.csv",
         folder=data_folder,
         output_name="node_info.csv",
     )
