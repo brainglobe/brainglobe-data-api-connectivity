@@ -2,7 +2,6 @@
 
 import re
 from pathlib import Path
-from typing import Optional, Tuple
 
 import pandas as pd
 
@@ -10,8 +9,8 @@ import pandas as pd
 def get_df_from_excel(
     file: Path,
     sheet_name: str,
-    data_range: Tuple[str, str],
-    header: Optional[int] = None,
+    data_range: tuple[str, str],
+    header: int | None = None,
 ) -> pd.DataFrame:
     """Return DataFrame sliced to given row/column ranges."""
     col_range, row_range = get_cell_range(data_range)
@@ -43,7 +42,7 @@ def validate_cell_reference(ref: str) -> None:
         raise ValueError(f"Invalid cell reference: {ref}")
 
 
-def cell_reference_to_indices(ref: str) -> Tuple[int, int]:
+def cell_reference_to_indices(ref: str) -> tuple[int, int]:
     """Split a cell reference into zero-based column index and row number."""
     validate_cell_reference(ref)
     col_ref = "".join(filter(str.isalpha, ref))
@@ -84,14 +83,14 @@ def normalise_index_range(
     return (min_col, min_row), (max_col, max_row)
 
 
-def validate_cell_range(cell_range: Tuple[str, str]) -> None:
+def validate_cell_range(cell_range: tuple[str, str]) -> None:
     """Validate that cell_range contains two cell references."""
     if len(cell_range) != 2:
         raise ValueError("Cell range must contain two cell references.")
 
 
 def get_cell_range(
-    cell_range: Tuple[str, str],
+    cell_range: tuple[str, str],
 ) -> tuple[tuple[int, int], tuple[int, int]]:
     """Convert two cell references into column and row index ranges."""
     validate_cell_range(cell_range)
@@ -117,7 +116,7 @@ def get_row_values(
     Args
         file: Path to the Excel file.
         sheet: Sheet name or index. If None, the first sheet is used.
-        data_range: Tuple of cell references defining the data range,
+        data_range: tuple of cell references defining the data range,
             e.g. ("A1", "C5").
         col_label: Excel column label (e.g. "A", "B", "AA") to extract values
         from.
@@ -154,7 +153,7 @@ def get_col_values(
     Args
         file: Path to the Excel file.
         sheet: Sheet name or index. If None, the first sheet is used.
-        data_range: Tuple of cell references defining the data range,
+        data_range: tuple of cell references defining the data range,
             e.g. ("A1", "C5").
         col_label: Excel row label (e.g. 1, 2) to extract values from.
 
