@@ -6,7 +6,7 @@
    :caption: Contents:
 
    neuro_to_math
-   _gallery_examples/index
+   examples/index
 ```
 
 This package acts as an interface between neurological region-connectivity data and network (graph) analysis.

@@ -1,6 +1,4 @@
 """
-.. _basic_example:
-
 A basic example.
 ================
 

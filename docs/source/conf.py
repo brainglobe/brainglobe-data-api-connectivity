@@ -71,10 +71,14 @@ myst_heading_anchors = 3
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
+SPHINX_GALLERY_OUTPUT_DIR = "examples/"
+
 # Sphinx gallery configuration settings
 sphinx_gallery_conf = {
     "examples_dirs": Path(__file__).parent / "../examples/",
-    "gallery_dirs": Path(__file__).parent / "_gallery_examples/",
+    "filename_pattern": "/*.py",
+    "gallery_dirs": Path(__file__).parent / SPHINX_GALLERY_OUTPUT_DIR,
+    "run_stale_examples": True,
 }
 
 # Automatically generate stub pages for API
@@ -89,6 +93,8 @@ exclude_patterns = [
     # to ensure that include files (partial pages) aren't built, exclude them
     # https://github.com/sphinx-doc/sphinx/issues/1965#issuecomment-124732907
     "**/includes/**",
+    f"{SPHINX_GALLERY_OUTPUT_DIR}/*ipynb",
+    f"{SPHINX_GALLERY_OUTPUT_DIR}/*.py",
 ]
 
 # -- Options for HTML output -------------------------------------------------
