@@ -15,15 +15,23 @@ def _test_morph(region_side: str) -> int:
 
 
 @pytest.mark.parametrize(
-    ["info2morph", "region_id", "error", "expected_idx"],
+    ["info2morph", "region_id", "error", "error_message", "expected_idx"],
     [
         pytest.param("one", "Area1", None, 0),
         pytest.param("two", "Area1", None, 1),
         pytest.param("one", "Area2", None, 2),
-        pytest.param("two", "Area2", ValueError, None),
+        pytest.param(
+            "two",
+            "Area2",
+            ValueError,
+            "Found 0 matches, expected 1.",
+            None,
+        ),
     ],
 )
-def test_lookup_node_index(info2morph, region_id, error, expected_idx):
+def test_lookup_node_index(
+    info2morph, region_id, error, error_message, expected_idx
+):
 
     info = pd.DataFrame(
         {
@@ -37,7 +45,7 @@ def test_lookup_node_index(info2morph, region_id, error, expected_idx):
     morph_value = {"info_to_morph": _test_morph}
 
     if error:
-        with pytest.raises(error):
+        with pytest.raises(error, match=error_message):
             idx = lookup_and_morph_node_index(
                 region_info, info, region_to_node_heading, morph_value
             )
