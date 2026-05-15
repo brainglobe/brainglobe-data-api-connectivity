@@ -42,6 +42,7 @@ dev = [
   "setuptools-scm",
 ]
 docs = [
+  "matplotlib",
   "pydata-sphinx-theme",
   "sphinx",
   "sphinx_autodoc_typehints",
