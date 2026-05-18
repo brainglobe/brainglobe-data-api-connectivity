@@ -88,9 +88,14 @@ if __name__ == "__main__":
         )
         node_info.to_csv(DATA_FOLDER / f"{sheet_tag}_info.csv", index=False)
 
-    # Consolidate duplicate info files
-    tidy.consolidate_duplicates(
-        pattern="[!edge]*_info.csv",
-        folder=DATA_FOLDER,
-        output_name="node_info.csv",
-    )
+    # CONSOLIDATE DUPLICATES
+    target = DATA_FOLDER / "node_info.csv"
+    target.unlink(missing_ok=True)
+    files = sorted(DATA_FOLDER.glob("[!edge]*_info.csv"))
+    if files:
+        reference = pd.read_csv(files[0])
+        if any(not pd.read_csv(f).equals(reference) for f in files[1:]):
+            raise ValueError("Info files do not match.")
+        files[0].rename(target)
+        for f in files[1:]:
+            f.unlink()
