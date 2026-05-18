@@ -88,7 +88,7 @@ if __name__ == "__main__":
         )
         node_info.to_csv(DATA_FOLDER / f"{sheet_tag}_info.csv", index=False)
 
-    # CONSOLIDATE DUPLICATES
+    # Consolidate duplicates
     target = DATA_FOLDER / "node_info.csv"
     target.unlink(missing_ok=True)
     files = sorted(DATA_FOLDER.glob("[!edge]*_info.csv"))
