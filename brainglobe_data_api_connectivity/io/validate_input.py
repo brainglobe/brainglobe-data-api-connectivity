@@ -8,7 +8,8 @@ def validate_adjacency_matrix(matrix: pd.DataFrame) -> None:
     rows, cols = matrix.shape
 
     if rows != cols:
-        raise ValueError(
-            "Adjacency matrix must be square, ",
-            f"but got {rows} rows and {cols} columns.",
+        error_message = (
+            "Adjacency matrix must be square, "
+            f"but got {rows} rows and {cols} columns."
         )
+        raise ValueError(error_message)
