@@ -1,37 +1,14 @@
 """Validation of input data"""
 
-from collections.abc import Sequence
-
 import pandas as pd
 
 
-def validate_adjacency_matrix(
-    matrix: pd.DataFrame, row_ids: Sequence[int], col_ids: Sequence[int]
-) -> None:
-    """Checks whether matrix has expected number of columns and rows."""
-    n_rows = len(row_ids)
-    n_cols = len(col_ids)
+def validate_adjacency_matrix(matrix: pd.DataFrame) -> None:
+    """Checks whether matrix is square and raises a clear error if not."""
+    rows, cols = matrix.shape
 
-    if n_rows != n_cols:
+    if rows != cols:
         raise ValueError(
-            f"There are {n_rows} rows and {n_cols} columns,"
-            "expected same number of rows and columns"
-        )
-
-    if matrix.shape != (n_rows, n_cols):
-        raise ValueError(
-            f"Matrix shape {matrix.shape} does not match expected "
-            f"({n_rows}, {n_cols})."
-        )
-
-
-def check_ids(row_ids: list[int], col_ids: list[int]) -> None:
-    """Row and col ids should match and range from 1 to n"""
-    if row_ids != col_ids:
-        raise ValueError("Row and column IDs do not match.")
-
-    expected_ids = list(range(1, len(row_ids) + 1))
-    if row_ids != expected_ids:
-        raise ValueError(
-            f"Row IDs {row_ids} do not match expected {expected_ids}."
+            "Adjacency matrix must be square, ",
+            f"but got {rows} rows and {cols} columns.",
         )

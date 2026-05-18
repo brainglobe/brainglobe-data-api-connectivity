@@ -63,24 +63,7 @@ if __name__ == "__main__":
             sheet,
             SWANSON_PARAMS["matrix_range"],
         )
-
-        mrcc_row_values = excel.get_row_values(
-            SWANSON_PARAMS["matrix_file"],
-            SWANSON_PARAMS["matrix_range"],
-            SWANSON_PARAMS["mrcc_col"],
-            sheet,
-        )
-        mrcc_col_values = excel.get_col_values(
-            SWANSON_PARAMS["matrix_file"],
-            SWANSON_PARAMS["matrix_range"],
-            SWANSON_PARAMS["mrcc_row"],
-            sheet,
-        )
-
-        validate_input.check_ids(mrcc_row_values, mrcc_col_values)
-        validate_input.validate_adjacency_matrix(
-            matrix, mrcc_row_values, mrcc_col_values
-        )
+        validate_input.validate_adjacency_matrix(matrix)
 
         # Convert matrix to edge table
         edge_table = convert.convert_matrix_to_edge_table(matrix)
