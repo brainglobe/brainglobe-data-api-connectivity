@@ -4,7 +4,7 @@ import pandas as pd
 
 
 def validate_adjacency_matrix(matrix: pd.DataFrame) -> None:
-    """Checks whether matrix is square and raises a clear error if not."""
+    """Check whether adjacency matrix is square, raising an error if not."""
     rows, cols = matrix.shape
 
     if rows != cols:
