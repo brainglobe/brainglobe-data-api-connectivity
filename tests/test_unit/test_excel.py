@@ -98,7 +98,7 @@ def test_cell_reference_to_indices(ref, expected_split_ref):
             ("A1", "B2", "C3"),
             ValueError,
             r"Cell range must contain two cell references",
-            id="invalid (3 cell refs",
+            id="invalid (3 cell refs)",
         ),
     ],
 )
