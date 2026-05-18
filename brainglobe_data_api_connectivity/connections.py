@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Hashable
+from typing import Container, Hashable
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -15,7 +15,6 @@ class Connections:
     ergo, we shall have an attribute instead.
     """
 
-    _edge_meta_index_col: str = "graph_edge"
     _node_internal_index_col: str = "node_index"
 
     edge_info: pl.DataFrame | None
@@ -144,6 +143,13 @@ class Connections:
 
         At the end of this method, `self.network` and `self.nodes` are set.
         """
+        if self._node_internal_index_col in nodes:
+            raise ValueError(
+                f"Heading '{self._node_internal_index_col}' must not be "
+                "present in the node metadata, as it is reserved "
+                "for internal index referencing."
+            )
+
         n_nodes = len(nodes)
 
         if self._node_internal_index_col in nodes:
@@ -232,12 +238,6 @@ class Connections:
                     "Connection metadata 'from' and 'to' columns are the same "
                     f"({from_column})."
                 )
-            if self._edge_meta_index_col in edge_meta:
-                raise ValueError(
-                    f"Heading '{self._edge_meta_index_col}' must not be "
-                    "present in the edge metadata table, as it is reserved"
-                    "for internal index referencing."
-                )
 
             self.ei_from_col = from_column
             self.ei_to_col = to_column
@@ -259,3 +259,57 @@ class Connections:
             self.edge_info = None
             self.ei_from_col = None
             self.ei_to_col = None
+
+    def _node_indexes_from_information(
+        self, *predicates, **constraints
+    ) -> pl.Series:
+        """Return graph indexes of nodes that match the given information.
+
+        This is essentially a convenience wrapper around a `DataFrame` `filter`
+        followed by a `get_column`. Intended use is so that users can select
+        nodes by neurological (?) information, and the API then handles
+        translating this information into the relevant internal node indexes,
+        running the actual graph-theoretic query, and then returning
+        the results.
+
+        Graph indexes are stored in the `.nodes` attribute, in the
+        `self._node_internal_index_col` column. The values in this column,
+        whose other row values match the given filters, are returned by this
+        function.
+
+        Args:
+            predicates:
+                See [`polars.DataFrame.filter`](https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.filter.html).
+            constraints:
+                See [`polars.DataFrame.filter`](https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.filter.html).
+
+        Returns:
+            graph_indexes:
+                Series containing all internal node indexes in `self.network`
+                that correspond to nodes with the given metadata.
+        """
+        return self.nodes.filter(*predicates, **constraints).get_column(
+            self._node_internal_index_col
+        )
+
+    def _node_information_from_index(
+        self, node_indexes: Container[int]
+    ) -> pl.DataFrame:
+        """Return information about nodes with the selected (internal) indexes.
+
+        Essentially a wrapper around a `polars.DataFrame.filter` that looks up
+        the relevant rows from the `.nodes` attribute and returns them.
+
+        Args:
+            node_indexes: Container[int]
+                Internal node indexes, referencing nodes to fetch information
+                about.
+
+        Returns:
+            node_information:
+                `polars.DataFrame` whose rows contain node information for the
+                requested nodes.
+        """
+        return self.nodes.filter(
+            pl.col(self._node_internal_index_col).is_in(node_indexes)
+        )
