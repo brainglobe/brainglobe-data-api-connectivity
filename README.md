@@ -11,7 +11,9 @@ cd brainglobe-data-api-connectivity
 
 
 ### Create a `conda` environment
-We recommend installing `brainglobe-data-api-connectivity` within a [conda](https://docs.conda.io/en/latest/) or [mamba](https://mamba.readthedocs.io/en/latest/index.html) environment. Instructions assume `conda` usage, but `mamba`/`micromamba` are interchangeable.
+We recommend installing `brainglobe-data-api-connectivity` within a [conda](https://docs.conda.io/en/latest/) or [mamba](https://mamba.readthedocs.io/en/latest/index.html) environment.
+
+Instructions assume `conda` usage, but `mamba`/`micromamba` are interchangeable.
 
 
 ```sh
