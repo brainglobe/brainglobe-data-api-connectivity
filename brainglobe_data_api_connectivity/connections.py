@@ -27,7 +27,7 @@ class Connections:
     @classmethod
     def from_files(
         cls,
-        nodes: Path,
+        node_info: Path,
         edge_table: Path,
         edge_meta: Path | None = None,
         **constructor_kwargs,
@@ -39,7 +39,7 @@ class Connections:
         folder) should be the input(s).
 
         Args:
-            nodes: Path
+            node_info: Path
                 Path to the file containing information about regions (nodes).
             edge_table: Path
                 Path to the file containing the edge table, to read information
@@ -58,7 +58,7 @@ class Connections:
         Returns:
             connections: `Connections` instance created from file information.
         """
-        node_collection = pl.read_csv(nodes)
+        node_collection = pl.read_csv(node_info)
 
         edge_table_entries = list(
             pl.read_csv(edge_table, has_header=False).iter_rows(named=False)
@@ -68,7 +68,7 @@ class Connections:
             edge_meta = pl.read_csv(edge_meta)
 
         return cls(
-            nodes=node_collection,
+            node_info=node_collection,
             edge_table=edge_table_entries,
             edge_meta=edge_meta,
             **constructor_kwargs,
@@ -76,7 +76,7 @@ class Connections:
 
     def __init__(
         self,
-        nodes: pl.DataFrame,
+        node_info: pl.DataFrame,
         edge_table: EdgeTable,
         edge_meta: pl.DataFrame | None = None,
         *,
@@ -87,7 +87,7 @@ class Connections:
         """Create a new set of connections.
 
         Args:
-            nodes: pd.DataFrame
+            node_info: pl.DataFrame
                 DataFrame containing information about the nodes. The index
                     will be overwritten by the internal indexes used for the
                     nodes by the internal network representation.
@@ -95,7 +95,7 @@ class Connections:
                 Edge-table representation of the node connections; a container
                     of `[from, to, weight]` values. `from` and `to` values
                     should refer to nodes by their identifier in `nodes`.
-            edge_meta: pd.DataFrame
+            edge_meta: pl.DataFrame
                 DataFrame containing information about connections. Two columns
                     must be present that contain the index (of the
                     corresponding row in `nodes`) of the node "from" which the
@@ -115,7 +115,7 @@ class Connections:
                     identifier.
         """
         index_translations = self._setup_network(
-            nodes, edge_table, existing_node_indexing=node_index_column
+            node_info, edge_table, existing_node_indexing=node_index_column
         )
 
         self._setup_edge_metadata(
