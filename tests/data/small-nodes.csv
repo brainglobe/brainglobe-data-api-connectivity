@@ -1,6 +1,6 @@
-field1,field2,field3
-alpha,1,1.0
-bravo,2,2.0
-charlie,3,3.0
-delta,4,4.0
-echo,5,5.0
+name,custom_index,mass,reverse_custom_index
+alpha,1,1.0,4
+bravo,2,2.0,3
+charlie,3,3.0,2
+delta,4,4.0,1
+echo,5,5.0,0
