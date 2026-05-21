@@ -265,9 +265,17 @@ class Connections:
     ) -> pl.Series:
         """Return graph indexes of nodes that match the given information.
 
+        Allows for looking up node indexes (as used by the `.network` object)
+        via information stored about the brain regions themselves. For example,
+        one can use this function to obtain the node indexes of all brain
+        regions that match a particular name, are on a particular side of the
+        brain, or a combination of these things. Regions are filtered based on
+        whether their corresponding row-entry in the `.nodes` `DataFrame`
+        matches the criteria given.
+
         This is essentially a convenience wrapper around a `DataFrame` `filter`
         followed by a `get_column`. Intended use is so that users can select
-        nodes by neurological (?) information, and the API then handles
+        nodes by neuroscientific information, and have the API handle
         translating this information into the relevant internal node indexes,
         running the actual graph-theoretic query, and then returning
         the results.
