@@ -51,7 +51,7 @@ class Connections:
                     Accepts
                     - `edge_meta_from_col`,
                     - `edge_meta_to_col`,
-                    - `nodes_already_indexed_by`.
+                    - `node_index_column`.
 
                     See `Connections.__init__` for more information.
 
@@ -82,7 +82,7 @@ class Connections:
         *,
         edge_meta_from_col: str = "from",
         edge_meta_to_col: str = "to",
-        nodes_already_indexed_by: str | None = None,
+        node_index_column: str | None = None,
     ):
         """Create a new set of connections.
 
@@ -107,7 +107,7 @@ class Connections:
             edge_meta_to_col: str
                 Header of the column in the `edge_meta` argument containing the
                     "to" node indexes.
-            nodes_already_indexed_by: str | None
+            node_index_column: str | None
                 Column header in `nodes` that is being used as the unique
                     identifier (index) for the nodes in the `edge_table` and
                     `edge_meta` inputs. If not provided, the method assumes the
@@ -115,7 +115,7 @@ class Connections:
                     identifier.
         """
         index_translations = self._setup_network(
-            nodes, edge_table, existing_node_indexing=nodes_already_indexed_by
+            nodes, edge_table, existing_node_indexing=node_index_column
         )
 
         self._setup_edge_metadata(
