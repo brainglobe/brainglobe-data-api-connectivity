@@ -54,7 +54,7 @@ def test_node_index_lookup(
     # holds up too.
     assert (
         expected_indexes
-        == G._node_indexes_from_information(
+        == G.node_indexes_from_information(
             *predicates, **constraints
         ).to_list()
     )
@@ -87,7 +87,7 @@ def test_node_information_lookup(
     G.nodes = G.nodes.rename({"manual_index": G._node_internal_index_col})
 
     # Run the lookup, checking we found the correct names (quick / naive check)
-    lookup = G._node_information_from_index(seek_indexes)
+    lookup = G.node_information_from_index(seek_indexes)
     assert_series_equal(
         lookup.get_column("name"),
         pl.Series(should_find_names),

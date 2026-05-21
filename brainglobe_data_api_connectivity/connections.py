@@ -260,7 +260,7 @@ class Connections:
             self.edge_info_from_col = None
             self.edge_info_to_col = None
 
-    def _node_indexes_from_information(
+    def node_indexes_from_information(
         self, *predicates, **constraints
     ) -> pl.Series:
         """Return graph indexes of nodes that match the given information.
@@ -292,7 +292,7 @@ class Connections:
             self._node_internal_index_col
         )
 
-    def _node_information_from_index(
+    def node_information_from_index(
         self, node_indexes: Container[int]
     ) -> pl.DataFrame:
         """Return information about nodes with the selected (internal) indexes.
