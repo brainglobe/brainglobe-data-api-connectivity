@@ -24,7 +24,7 @@ def abc_nodes() -> pl.DataFrame:
 
 @pytest.fixture
 def edge_metadata() -> pl.DataFrame:
-    "A simple 'edge metadata' frame for testing setup."
+    "A simple 'edge information' frame for testing setup."
     return pl.DataFrame(
         {
             "to": [0, 1, 2],
@@ -193,7 +193,7 @@ def test_connections_setup_network_error_catches(
 
 
 @pytest.mark.parametrize(
-    ("edge_meta", "index_translations", "from_column", "to_column"),
+    ("edge_info", "index_translations", "from_column", "to_column"),
     [
         pytest.param(
             None,
@@ -233,24 +233,24 @@ def test_connections_setup_network_error_catches(
     ],
 )
 def test_connections_setup_edge_metadata(
-    edge_meta: pl.DataFrame | None,
+    edge_info: pl.DataFrame | None,
     index_translations: dict[Hashable, int] | None,
     from_column: str,
     to_column: str,
     mocker: pytest_mock.MockerFixture,
     request: pytest.FixtureRequest,
 ) -> None:
-    if isinstance(edge_meta, str):
-        edge_meta = request.getfixturevalue(edge_meta)
+    if isinstance(edge_info, str):
+        edge_info = request.getfixturevalue(edge_info)
 
     mocker.patch.object(Connections, "__init__", lambda *args, **kwargs: None)
     G = Connections()
 
     G._setup_edge_metadata(
-        edge_meta, from_column, to_column, index_translations
+        edge_info, from_column, to_column, index_translations
     )
 
-    if edge_meta is None:
+    if edge_info is None:
         assert G.edge_info is None
         assert G.edge_info_from_col is None
         assert G.edge_info_to_col is None
@@ -259,13 +259,13 @@ def test_connections_setup_edge_metadata(
         assert G.edge_info_from_col == from_column
         assert G.edge_info_to_col == to_column
 
-        assert G.edge_info.shape == edge_meta.shape
+        assert G.edge_info.shape == edge_info.shape
         preserved_columns = set(
-            c for c in edge_meta.columns if c not in [from_column, to_column]
+            c for c in edge_info.columns if c not in [from_column, to_column]
         )
 
         # Confirm metadata has been updated to respect any index translations
-        for row in edge_meta.iter_rows(named=True):
+        for row in edge_info.iter_rows(named=True):
             if index_translations is not None:
                 new_from = index_translations[row[from_column]]
                 new_to = index_translations[row[to_column]]
@@ -334,17 +334,16 @@ def test_connections_construction(
     G_from_file = Connections.from_files(
         nodes, edge_table, edge_meta, **constructor_kwargs
     )
-    G_via_construction = Connections(
+    G_via_dataframes = Connections(
         pl.read_csv(nodes),
         read_edge_table(edge_table),
         pl.read_csv(edge_meta),
         **constructor_kwargs,
     )
 
-    assert_frame_equal(G_from_file.nodes, G_via_construction.nodes)
-    assert G_from_file.network.nodes() == G_via_construction.network.nodes()
+    assert_frame_equal(G_from_file.nodes, G_via_dataframes.nodes)
+    assert G_from_file.network.nodes() == G_via_dataframes.network.nodes()
     assert (
-        G_from_file.network.edge_list()
-        == G_via_construction.network.edge_list()
+        G_from_file.network.edge_list() == G_via_dataframes.network.edge_list()
     )
-    assert_frame_equal(G_from_file.edge_info, G_via_construction.edge_info)
+    assert_frame_equal(G_from_file.edge_info, G_via_dataframes.edge_info)
