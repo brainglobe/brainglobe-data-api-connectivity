@@ -18,8 +18,8 @@ class Connections:
     _node_internal_index_col: str = "node_index"
 
     edge_info: pl.DataFrame | None
-    ei_from_col: str | None
-    ei_to_col: str | None
+    edge_info_from_col: str | None
+    edge_info_to_col: str | None
 
     network: PyDiGraph
     nodes: pl.DataFrame
@@ -239,26 +239,26 @@ class Connections:
                     f"({from_column})."
                 )
 
-            self.ei_from_col = from_column
-            self.ei_to_col = to_column
+            self.edge_info_from_col = from_column
+            self.edge_info_to_col = to_column
 
             # Apply any index translations that occurred due to nodes not being
             # indexed by row when they were read in.
             if index_translations is not None:
                 self.edge_info = edge_meta.with_columns(
-                    pl.col(self.ei_from_col)
+                    pl.col(self.edge_info_from_col)
                     .replace(index_translations)
-                    .alias(self.ei_from_col),
-                    pl.col(self.ei_to_col)
+                    .alias(self.edge_info_from_col),
+                    pl.col(self.edge_info_to_col)
                     .replace(index_translations)
-                    .alias(self.ei_to_col),
+                    .alias(self.edge_info_to_col),
                 )
             else:
                 self.edge_info = edge_meta
         else:
             self.edge_info = None
-            self.ei_from_col = None
-            self.ei_to_col = None
+            self.edge_info_from_col = None
+            self.edge_info_to_col = None
 
     def _node_indexes_from_information(
         self, *predicates, **constraints

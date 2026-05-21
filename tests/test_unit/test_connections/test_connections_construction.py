@@ -252,12 +252,12 @@ def test_connections_setup_edge_metadata(
 
     if edge_meta is None:
         assert G.edge_info is None
-        assert G.ei_from_col is None
-        assert G.ei_to_col is None
+        assert G.edge_info_from_col is None
+        assert G.edge_info_to_col is None
     else:
         assert G.edge_info is not None
-        assert G.ei_from_col == from_column
-        assert G.ei_to_col == to_column
+        assert G.edge_info_from_col == from_column
+        assert G.edge_info_to_col == to_column
 
         assert G.edge_info.shape == edge_meta.shape
         preserved_columns = set(
@@ -274,8 +274,8 @@ def test_connections_setup_edge_metadata(
                 new_to = row[to_column]
 
             unique_matching_row = G.edge_info.row(
-                by_predicate=(pl.col(G.ei_from_col) == new_from)
-                & (pl.col(G.ei_to_col) == new_to),
+                by_predicate=(pl.col(G.edge_info_from_col) == new_from)
+                & (pl.col(G.edge_info_to_col) == new_to),
                 named=True,
             )
 
