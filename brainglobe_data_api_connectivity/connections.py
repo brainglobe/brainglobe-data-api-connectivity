@@ -29,7 +29,7 @@ class Connections:
         cls,
         node_info: Path,
         edge_table: Path,
-        edge_meta: Path | None = None,
+        edge_info: Path | None = None,
         **constructor_kwargs,
     ) -> "Connections":
         """Create `Connections` by reading information from a file.
@@ -44,13 +44,13 @@ class Connections:
             edge_table: Path
                 Path to the file containing the edge table, to read information
                     about connected regions.
-            edge_meta: Path
+            edge_info: Path
                 Path to the file containing metadata about edge connections.
             constructor_kwargs:
                 Additional keyword arguments to pass to the constructor method.
                     Accepts
-                    - `edge_meta_from_col`,
-                    - `edge_meta_to_col`,
+                    - `edge_info_from_col`,
+                    - `edge_info_to_col`,
                     - `node_index_column`.
 
                     See `Connections.__init__` for more information.
@@ -64,13 +64,13 @@ class Connections:
             pl.read_csv(edge_table, has_header=False).iter_rows(named=False)
         )
 
-        if edge_meta is not None:
-            edge_meta = pl.read_csv(edge_meta)
+        if edge_info is not None:
+            edge_info = pl.read_csv(edge_info)
 
         return cls(
             node_info=node_collection,
             edge_table=edge_table_entries,
-            edge_meta=edge_meta,
+            edge_info=edge_info,
             **constructor_kwargs,
         )
 
@@ -78,10 +78,10 @@ class Connections:
         self,
         node_info: pl.DataFrame,
         edge_table: EdgeTable,
-        edge_meta: pl.DataFrame | None = None,
+        edge_info: pl.DataFrame | None = None,
         *,
-        edge_meta_from_col: str = "from",
-        edge_meta_to_col: str = "to",
+        edge_info_from_col: str = "from",
+        edge_info_to_col: str = "to",
         node_index_column: str | None = None,
     ):
         """Create a new set of connections.
@@ -95,22 +95,22 @@ class Connections:
                 Edge-table representation of the node connections; a container
                     of `[from, to, weight]` values. `from` and `to` values
                     should refer to nodes by their identifier in `nodes`.
-            edge_meta: pl.DataFrame
+            edge_info: pl.DataFrame
                 DataFrame containing information about connections. Two columns
                     must be present that contain the index (of the
                     corresponding row in `nodes`) of the node "from" which the
                     edge leaves and "to" which the edge connects. All other
                     columns are assumed to contain data.
-            edge_meta_from_col: str
-                Header of the column in the `edge_meta` argument containing the
+            edge_info_from_col: str
+                Header of the column in the `edge_info` argument containing the
                     "from" node indexes.
-            edge_meta_to_col: str
-                Header of the column in the `edge_meta` argument containing the
+            edge_info_to_col: str
+                Header of the column in the `edge_info` argument containing the
                     "to" node indexes.
             node_index_column: str | None
                 Column header in `nodes` that is being used as the unique
                     identifier (index) for the nodes in the `edge_table` and
-                    `edge_meta` inputs. If not provided, the method assumes the
+                    `edge_info` inputs. If not provided, the method assumes the
                     row index of a node in `nodes` is being used as the
                     identifier.
         """
@@ -119,9 +119,9 @@ class Connections:
         )
 
         self._setup_edge_metadata(
-            edge_meta,
-            edge_meta_from_col,
-            edge_meta_to_col,
+            edge_info,
+            edge_info_from_col,
+            edge_info_to_col,
             index_translations=index_translations,
         )
 
@@ -219,7 +219,7 @@ class Connections:
 
     def _setup_edge_metadata(
         self,
-        edge_meta: pl.DataFrame | None,
+        edge_info: pl.DataFrame | None,
         from_column: str,
         to_column: str,
         index_translations: dict[Hashable, int] | None = None,
@@ -230,9 +230,9 @@ class Connections:
         set to `None` if no such information is provided.
 
         At the end of this method, `self.edge_info` is set, as well as both of
-        `self.ei_{from,to}_col`.
+        `self.edge_info_{from,to}_col`.
         """
-        if edge_meta is not None:
+        if edge_info is not None:
             if from_column == to_column:
                 raise ValueError(
                     "Connection metadata 'from' and 'to' columns are the same "
@@ -245,7 +245,7 @@ class Connections:
             # Apply any index translations that occurred due to nodes not being
             # indexed by row when they were read in.
             if index_translations is not None:
-                self.edge_info = edge_meta.with_columns(
+                self.edge_info = edge_info.with_columns(
                     pl.col(self.edge_info_from_col)
                     .replace(index_translations)
                     .alias(self.edge_info_from_col),
@@ -254,7 +254,7 @@ class Connections:
                     .alias(self.edge_info_to_col),
                 )
             else:
-                self.edge_info = edge_meta
+                self.edge_info = edge_info
         else:
             self.edge_info = None
             self.edge_info_from_col = None
