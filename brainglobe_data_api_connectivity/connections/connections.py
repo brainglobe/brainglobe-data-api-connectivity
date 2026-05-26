@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Container, Hashable
+from typing import Callable, Container, Hashable
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -260,6 +260,49 @@ class Connections:
             self.edge_info = None
             self.edge_info_from_col = None
             self.edge_info_to_col = None
+
+    def collapse_nodes(
+        self,
+        nodes: Container[int],
+        weight_collapse_fn: Callable[[float], float] | None = None,
+    ) -> int:
+        """Collapse nodes into a single node.
+
+        This operation is done **in-place**, modifying the `.network`. Indices
+        passed in `nodes` will no longer be present in the `.network`, and
+        a new node that represents the "super"-node will be added. The
+        index of this node is returned by the method.
+
+        Note that any metadata pertaining to the collapsed nodes, and the
+        resulting region, is preserved. The exception being that the nodes
+        which are "collapsed" will have their internal indexes set to `null`,
+        to reflect the fact that they are no longer represented in the network.
+
+        Collapsing several nodes into a single node removes any edges between
+        pairs of said nodes.
+
+        If multiple nodes in `nodes` $v_i$ (for some index set
+        $i\in\mathcal{I}$) have a connection to some other node $v_j$ that is
+        not in `nodes`, then a decision must be made regarding the weight of
+        the resulting connection between the super-node and $v_j$. This is
+        based on the weights of the edges $(v_i, v_j)$, which are passed as
+        arguments to the `weight_collapse_fn` and should return the resulting
+        weight that will be applied to the edge from the super-node to $v_j$.
+        WLOG; we have described the case for the edges directed into $v_j$,
+        though the reverse direction is treated identically (creating an edge
+        directed _from_ $v_j$ to the super-node).
+
+        Args:
+            nodes: Container[int]
+                Internal node indexes that are to be collapsed.
+            weight_collapse_fn: Callable[[float], float] | None
+                Function that dictates behaviour for combining edge weights
+                when nodes are collapsed (see above).
+
+        Returns:
+            super_node_index:
+                Internal index of the super-node within the `.network`.
+        """
 
     def node_indexes_from_information(
         self, *predicates, **constraints
