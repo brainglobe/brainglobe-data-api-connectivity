@@ -290,12 +290,10 @@ class Connections:
         $i\in\mathcal{I}$) have a connection to some other node $v_j$ that is
         not in `nodes`, then a decision must be made regarding the weight of
         the resulting connection between the super-node and $v_j$. This is
-        based on the weights of the edges $(v_i, v_j)$, which are passed as
-        arguments to the `weight_collapse_fn` and should return the resulting
-        weight that will be applied to the edge from the super-node to $v_j$.
-        WLOG; we have described the case for the edges directed into $v_j$,
-        though the reverse direction is treated identically (creating an edge
-        directed _from_ $v_j$ to the super-node).
+        based on the weights of the edges $(v_i, v_j)$ (reverse direction is
+        treated separately but identically), which are passed as arguments to
+        the `weight_collapse_fn` and should return the resulting weight that
+        will be applied to the edge from the super-node to $v_j$.
 
         Args:
             nodes: Container[int]
