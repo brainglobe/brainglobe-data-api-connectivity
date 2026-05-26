@@ -28,10 +28,24 @@ from brainglobe_data_api_connectivity.connections import Connections
             id="Collapse all the nodes",
         ),
         pytest.param(
-            "FIXME",
-            "FIXME",
+            pl.DataFrame(
+                {
+                    "name": ["a", "a", "b", "c", "d"],
+                }
+            ),
+            "small-edge-table.csv",
             (0, 1),
-            id="Collapse with identical nodes (up to internal index)",
+            id="Collapse with identical nodes (included in collapse)",
+        ),
+        pytest.param(
+            pl.DataFrame(
+                {
+                    "name": ["a", "a", "b", "c", "d"],
+                }
+            ),
+            "small-edge-table.csv",
+            (0, 2),
+            id="Collapse with identical nodes (excluded from collapse)",
         ),
     ],
 )
@@ -54,12 +68,12 @@ def test_collapse_nodes(
     node_info = (
         DATA_DIR / node_info
         if isinstance(node_info, str | Path)
-        else tmp_csv(node_info)
+        else tmp_csv(node_info, "nodes.csv")
     )
     edge_table = (
         DATA_DIR / edge_table
         if isinstance(edge_table, str | Path)
-        else tmp_csv(edge_table)
+        else tmp_csv(edge_table, "edges.csv")
     )
 
     G = Connections.from_files(DATA_DIR / node_info, DATA_DIR / edge_table)
