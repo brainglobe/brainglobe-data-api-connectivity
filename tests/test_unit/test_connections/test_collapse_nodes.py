@@ -2,16 +2,37 @@ from collections.abc import Callable
 from pathlib import Path
 
 import polars as pl
+import pytest
 
 from brainglobe_data_api_connectivity.connections import Connections
 
 
+@pytest.mark.parametrize(
+    ("node_info", "edge_table", "nodes_to_collapse", "weight_fn"),
+    [
+        pytest.param(
+            "small-nodes.csv",
+            "small-edge-table.csv",
+            (1,),
+            None,
+            id="Single node collapse",
+        ),
+        pytest.param(
+            "small-nodes.csv",
+            "small-edge-table.csv",
+            (0, 1),
+            None,
+            id="2-node collapse",
+        ),
+    ],
+)
 def test_collapse_nodes(
+    node_info: str | Path,
+    edge_table: str | Path,
+    nodes_to_collapse: tuple[int],
+    weight_fn: Callable[..., float] | None,
     DATA_DIR: Path,
-    nodes_to_collapse: tuple[int] = (1,),
-    weight_fn: Callable[..., float] | None = None,
-    node_info: str | Path = "small-nodes.csv",
-    edge_table: str | Path = "small-edge-table.csv",
+    tmp_csv,
 ) -> None:
     """Confirm that collapsing nodes acts as intended.
 
@@ -22,6 +43,17 @@ def test_collapse_nodes(
     Similarly, we do not check that the weight function has been applied
     correctly, since this is directly delegated to the `rustworkx` method.
     """
+    node_info = (
+        DATA_DIR / node_info
+        if isinstance(node_info, str | Path)
+        else tmp_csv(node_info)
+    )
+    edge_table = (
+        DATA_DIR / edge_table
+        if isinstance(edge_table, str | Path)
+        else tmp_csv(edge_table)
+    )
+
     G = Connections.from_files(DATA_DIR / node_info, DATA_DIR / edge_table)
 
     # List of dicts, each dict being a row of the .nodes property that will

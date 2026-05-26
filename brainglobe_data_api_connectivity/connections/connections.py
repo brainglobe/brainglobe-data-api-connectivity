@@ -25,6 +25,11 @@ class Connections:
     network: PyDiGraph
     nodes: pl.DataFrame
 
+    @staticmethod
+    def __default_collapse_weight_fn(*args: float) -> float:
+        """Default weight function for `collapse_nodes`."""
+        return sum(args)
+
     @classmethod
     def from_files(
         cls,
@@ -264,7 +269,7 @@ class Connections:
     def collapse_nodes(
         self,
         nodes: Iterable[int],
-        weight_collapse_fn: Callable[..., float] = sum,
+        weight_collapse_fn: Callable[..., float] | None = None,
     ) -> int:
         r"""Collapse nodes into a single node.
 
@@ -295,14 +300,18 @@ class Connections:
         Args:
             nodes: Container[int]
                 Internal node indexes that are to be collapsed.
-            weight_collapse_fn: Callable[[float], float] | None
+            weight_collapse_fn: Callable[..., float] | None
                 Function that dictates behaviour for combining edge weights
-                when nodes are collapsed (see above).
+                when nodes are collapsed (see above). Default is to sum edge
+                weights.
 
         Returns:
             super_node_index:
                 Internal index of the super-node within the `.network`.
         """
+        if weight_collapse_fn is None:
+            weight_collapse_fn = self.__default_collapse_weight_fn
+
         super_node_data = "Collapse of " + ", ".join(str(i) for i in nodes)
         super_node_index = self.network.contract_nodes(
             nodes, super_node_data, weight_combo_fn=weight_collapse_fn
