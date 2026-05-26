@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Container, Hashable
+from typing import Callable, Container, Hashable, Iterable
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -263,10 +263,10 @@ class Connections:
 
     def collapse_nodes(
         self,
-        nodes: Container[int],
+        nodes: Iterable[int],
         weight_collapse_fn: Callable[..., float] = sum,
     ) -> int:
-        """Collapse nodes into a single node.
+        r"""Collapse nodes into a single node.
 
         This operation is done **in-place**, modifying the `.network`. Indices
         passed in `nodes` will no longer be present in the `.network`, and
@@ -303,15 +303,19 @@ class Connections:
             super_node_index:
                 Internal index of the super-node within the `.network`.
         """
+        super_node_data = "Collapse of " + ", ".join(str(i) for i in nodes)
         super_node_index = self.network.contract_nodes(
-            nodes, weight_combo_fn=weight_collapse_fn
+            nodes, super_node_data, weight_combo_fn=weight_collapse_fn
         )
 
         # Handle metadata fallout, first by mapping all nodes that were part of
         # the collapse to `polars.Null` values.
-        self.nodes.with_columns(
+        self.nodes = self.nodes.with_columns(
             pl.col(self._node_internal_index_col)
-            .map_elements(lambda x: pl.Null if x in nodes else x)
+            .map_elements(
+                lambda x: None if x in nodes else x,
+                return_dtype=int,
+            )
             .alias(self._node_internal_index_col)
         )
         # Handling anything hierarchical should then be done here.
