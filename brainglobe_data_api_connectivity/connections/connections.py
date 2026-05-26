@@ -264,7 +264,7 @@ class Connections:
     def collapse_nodes(
         self,
         nodes: Container[int],
-        weight_collapse_fn: Callable[[float], float] | None = None,
+        weight_collapse_fn: Callable[..., float] = sum,
     ) -> int:
         """Collapse nodes into a single node.
 
@@ -303,6 +303,20 @@ class Connections:
             super_node_index:
                 Internal index of the super-node within the `.network`.
         """
+        super_node_index = self.network.contract_nodes(
+            nodes, weight_combo_fn=weight_collapse_fn
+        )
+
+        # Handle metadata fallout, first by mapping all nodes that were part of
+        # the collapse to `polars.Null` values.
+        self.nodes.with_columns(
+            pl.col(self._node_internal_index_col)
+            .map_elements(lambda x: pl.Null if x in nodes else x)
+            .alias(self._node_internal_index_col)
+        )
+        # Handling anything hierarchical should then be done here.
+
+        return super_node_index
 
     def node_indexes_from_information(
         self, *predicates, **constraints
