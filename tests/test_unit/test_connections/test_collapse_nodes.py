@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from pathlib import Path
 
 import polars as pl
@@ -8,21 +7,31 @@ from brainglobe_data_api_connectivity.connections import Connections
 
 
 @pytest.mark.parametrize(
-    ("node_info", "edge_table", "nodes_to_collapse", "weight_fn"),
+    ("node_info", "edge_table", "nodes_to_collapse"),
     [
         pytest.param(
             "small-nodes.csv",
             "small-edge-table.csv",
             (1,),
-            None,
             id="Single node collapse",
         ),
         pytest.param(
             "small-nodes.csv",
             "small-edge-table.csv",
             (0, 1),
-            None,
             id="2-node collapse",
+        ),
+        pytest.param(
+            "small-nodes.csv",
+            "small-edge-table.csv",
+            (0, 1, 2, 3, 4),
+            id="Collapse all the nodes",
+        ),
+        pytest.param(
+            "FIXME",
+            "FIXME",
+            (0, 1),
+            id="Collapse with identical nodes (up to internal index)",
         ),
     ],
 )
@@ -30,7 +39,6 @@ def test_collapse_nodes(
     node_info: str | Path,
     edge_table: str | Path,
     nodes_to_collapse: tuple[int],
-    weight_fn: Callable[..., float] | None,
     DATA_DIR: Path,
     tmp_csv,
 ) -> None:
@@ -62,9 +70,7 @@ def test_collapse_nodes(
         nodes_to_collapse
     ).to_dicts()
 
-    super_index = G.collapse_nodes(
-        nodes_to_collapse, weight_collapse_fn=weight_fn
-    )
+    super_index = G.collapse_nodes(nodes_to_collapse)
     network_node_indexes_after_collapse = G.network.node_indices()
     assert super_index in G.network.node_indices()
     assert all(
