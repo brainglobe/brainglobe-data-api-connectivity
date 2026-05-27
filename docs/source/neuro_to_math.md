@@ -32,9 +32,9 @@ source node, target node, connection strength
 ```
 
 :::{note}
-Any further information about the regions can be stored in some suitable data format (such as a `DataFrame`) that allows indexing via the region identifiers - this information is referred to as "region metadata" or "node metadata".
+Any further information about the regions can be stored in some suitable data format (such as a `DataFrame`) that allows indexing via the region identifiers—this information is referred to as "region metadata" or "node metadata".
 
-Similarly, any further information about the connections (excluding their strengths) can be stored in tabular format that allows indexing via **pairs of** region identifiers that describes the connection's start and end - this information is referred to as "connection metadata" or "edge metadata".
+Similarly, any further information about the connections (excluding their strengths) can be stored in tabular format that allows indexing via **pairs of** region identifiers that describes the connection's start and end—this information is referred to as "connection metadata" or "edge metadata".
 
 Region metadata (except for unique region identifiers) and connection metadata is entirely optional for a purely mathematical analysis of the connectivity data.
 However, such information is normally incredibly helpful to have on-hand when one wants to run or plan neuroscientifically-relevant analysis!
@@ -109,7 +109,7 @@ Note that a connection being excluded from the edge table (and thus the network)
 ## Mathematical Details and Implementation
 
 Whilst we can get by with a colloquial description of networks, in some places it will be necessary for us to use a more mathematical description of these objects.
-We aim to set a standard for our notation - and conventions - in this section.
+We aim to set a standard for our notation—and conventions—in this section.
 
 A network $G = (V, E)$ consists of:
 
