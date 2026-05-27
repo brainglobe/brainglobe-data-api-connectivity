@@ -83,3 +83,6 @@ venv/
 
 # written by setuptools-scm
 **/_version.py
+
+# data folder
+data/
