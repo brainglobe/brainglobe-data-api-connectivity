@@ -4,7 +4,7 @@ On this page we aim to provide a short summary that reconciles the terminology u
 
 ## Connectivity Data and Networks
 
-Connectivity data generally consists of three to four components:
+Connectivity data generally consists of the following components:
 
 - Information about the brain-regions, whose connections have been explored.
   Typically they will be given some form of unique identifier, as well as names, abbreviations, any groupings of regions, and other data like their spatial coordinates.
@@ -12,7 +12,7 @@ Connectivity data generally consists of three to four components:
 - Further information about the connections.
   This may consist of information about the studies in which they were examined, any special reference names they might have, or any user- or neurological-groupings of the connections themselves.
 - Any metadata about the dataset, or study that generated the dataset.
-  These may be fields such as the species, sex, or age of the specimen from which the connectivity information was obtained, the institute at which the experiment was conducted, etc.
+  These may be fields such as the species, sex, or age of the animal from which the connectivity information was obtained, the institute at which the experiment was conducted, etc.
 
 Mathematical networks are an abstract representation of connections between a collection of objects.
 A network consists of a collection of **nodes** that are connected to each other by (directed) **edges**, with each edge possessing a **weight** that characterises the connection.
