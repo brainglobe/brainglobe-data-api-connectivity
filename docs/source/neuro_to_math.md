@@ -36,7 +36,7 @@ Any further information about the regions can be stored in some suitable data fo
 
 Similarly, any further information about the connections (excluding their strengths) can be stored in tabular format that allows indexing via **pairs of** region identifiers that describes the connection's start and end - this information is referred to as "connection metadata" or "edge metadata".
 
-Region metadata (save for provision a unique identifiers for the regions) and connection metadata is entirely optional from a purely mathematical analysis of the connectivity data.
+Region metadata (except for unique region identifiers) and connection metadata is entirely optional from a purely mathematical analysis of the connectivity data.
 However, such information is normally incredibly helpful to have on-hand when one wants to run or plan neuroscientifically-relevant analysis!
 :::
 
