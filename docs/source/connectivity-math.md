@@ -13,12 +13,12 @@ It consists of two components:
 
 When modelling brain connectivity, the nodes ($V$) represent the **brain regions**, and the edges ($E$) represent the **connections** between them.
 
-### 1. Nodes
+### Nodes
 The nodes are indexed by some counter, so we typically write $V := \{ v_0, v_1, ..., v_N\}$ where each $v_i$ is one node, uniquely identified by the value of $i$.
 
 As such, when referring to nodes it is common to drop the $v_i$ notation and simply say "node $i$" in place of "node $v_i$".
 
-### 2. Edges
+### Edges
 Each edge $e\in E$ is written as $e = (i, j, w)$ (or $e = (v_i, v_j, w)$).
 
 $(i, j, w)$ represents a directed, weighted edge that:
@@ -27,8 +27,7 @@ $(i, j, w)$ represents a directed, weighted edge that:
 - goes **to** node $j$
 - with **weight** $w$
 
-### Edge Table
-The edge table that describes a network can then simply be seen as a listing of the edges $e\in E$.
+The **edge table** that describes a network can then simply be seen as a listing of the edges $e\in E$.
 
 For an example of how an edge table corresponds to a network, see [Example: Edge Table and Corresponding Network](./connectivity-data.md#example-edge-table-and-corresponding-network).
 
