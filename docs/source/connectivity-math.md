@@ -25,7 +25,7 @@ $(i, j, w)$ represents a directed, weighted edge that:
 
 - starts **from** node $i$
 - goes **to** node $j$
-- has **weight** $w$
+- with **weight** $w$
 
 ### Edge Table
 The edge table that describes a network can then simply be seen as a listing of the edges $e\in E$.
@@ -51,21 +51,9 @@ Several functions also exist to aid in obtaining a selection of nodes by matchin
 
 When the [example edge table](./connectivity-data.md#example-edge-table-and-corresponding-network) is loaded, the package assigns each unique region label an internal integer index.
 
-| region | internal index |
+| region label | internal index |
 |--------|----------------|
 | l‑a    | 0              |
 | l‑b    | 1              |
 | r‑a    | 2              |
 | r‑b    | 3              |
-
-The corresponding edge table (using internal indexes instead of region labels) becomes:
-
-| source | target | weight |
-|--------|--------|--------|
-| 0      | 1      | 1.0    |
-| 0      | 2      | 0.5    |
-| 1      | 2      | 0.5    |
-| 1      | 3      | 0.5    |
-| 2      | 3      | 1.0    |
-| 3      | 0      | 0.1    |
-| 3      | 2      | 0.1    |
