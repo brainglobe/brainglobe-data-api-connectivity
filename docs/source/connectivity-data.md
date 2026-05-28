@@ -56,7 +56,7 @@ and we can also make a few observations:
 - In addition to the direct connections, all of the regions are indirectly connected to each other (since there is a path that can be taken to each any particular region from any other region).
 
 :::{note}
-Often the description of nodes, edges, and weights given here is all you need. But sometimes you may need a more precise, mathematical description of how nodes, edges, and weights are defined, for this see [Mathematical Description of a Network](.\connectivity-math.md).
+Often the description of nodes, edges, and weights given here is all you need. But sometimes you may need a more precise, mathematical description of how nodes, edges, and weights are defined, for this see [Mathematical Description of a Network](./connectivity-math.md).
 :::
 
 ## Metadata
