@@ -48,7 +48,7 @@ Several functions also exist to aid in obtaining a selection of nodes by matchin
 
 #### Example: Internal Indexes
 
-When the [example edge table](./connectivity-data.md#example-edge-table-and-corresponding-network) is loaded, the package assigns each unique region label an internal integer index.
+When the [example edge table](./connectivity-data.md#example-edge-table-and-corresponding-network) is loaded, the package assigns an internal integer index to each unique region label. This mapping allows the network to be stored and processed using integers, while still preserving the original region labels for interpretation.
 
 | region label | internal index |
 |--------|----------------|
