@@ -70,8 +70,6 @@ if __name__ == "__main__":
         edge_info["source_region_id"] + "-" + edge_info["target_region_id"]
     )
 
-    edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
-
     # Process each matrix sheet
     for sheet in SWANSON_PARAMS["matrix_sheets"]:
         # Load and validate matrix and ids
@@ -85,7 +83,7 @@ if __name__ == "__main__":
         # Convert matrix to edge table
         edge_table_raw = convert.convert_matrix_to_edge_table(matrix)
 
-        # Normalise: convert 0/1/2/3 → 0
+        # Normalise: convert 0/1/2/3 to 0
         edge_table_norm = edge_table_raw.copy()
         edge_table_norm[np.isin(edge_table_norm[:, 2], range(4)), 2] = 0
 
@@ -100,7 +98,9 @@ if __name__ == "__main__":
         node_info.columns = tidy.rename_columns(node_info.columns)
 
         # add unique region_id for nodes
-        node_info["region_id"] = node_info["abbr"] + "_" + node_info["side"]
+        node_info["region_id"] = (
+            node_info["abbr"] + "_" + node_info["side"].astype(str)
+        )
 
         # Save outputs
         sheet_tag = sheet.replace(" ", "_")
@@ -111,6 +111,62 @@ if __name__ == "__main__":
             delimiter=",",
         )
         node_info.to_csv(DATA_FOLDER / f"{sheet_tag}_info.csv", index=False)
+
+    # Add edge_id to edge_table_raw
+    edge_id = (
+        node_info["region_id"].iloc[edge_table_raw[:, 0]].values
+        + "-"
+        + node_info["region_id"].iloc[edge_table_raw[:, 1]].values
+    )
+
+    edge_table_raw_df = pd.DataFrame(
+        {
+            "source_region_idx": edge_table_raw[:, 0],
+            "target_region_idx": edge_table_raw[:, 1],
+            "raw_connection_strength": edge_table_raw[:, 2],
+            "edge_id": edge_id,
+        }
+    )
+
+    merged = edge_info.merge(edge_table_raw_df, on="edge_id", how="left")
+
+    #########################################################################
+    #######################       TEST           ############################
+    #########################################################################
+
+    # TODO investigate whether ids are as expected and why merged
+    #  is not as expected
+
+    edge_info_ids = set(edge_info["edge_id"])
+    raw_ids = set(edge_table_raw_df["edge_id"])
+
+    matches = edge_info_ids & raw_ids
+    missing_in_raw = edge_info_ids - raw_ids
+    missing_in_info = raw_ids - edge_info_ids
+
+    print("Matches:", len(matches))
+    print("Missing in raw:", len(missing_in_raw))
+    print("Missing in edge_info:", len(missing_in_info))
+
+    node_ids = set(node_info["region_id"])
+    info_ids = set(edge_info["source_region_id"]) | set(
+        edge_info["target_region_id"]
+    )
+
+    print("In node_info but not in edge_info:", len(node_ids - info_ids))
+    print("In edge_info but not in node_info:", len(info_ids - node_ids))
+
+    node_ids = set(node_info["region_id"])
+    info_ids = set(edge_info["source_region_id"]) | set(
+        edge_info["target_region_id"]
+    )
+
+    missing_regions = info_ids - node_ids
+    print(missing_regions)
+
+    #########################################################################
+
+    edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
 
     # Consolidate duplicates
     target = DATA_FOLDER / "node_info.csv"
