@@ -34,7 +34,7 @@ SWANSON_PARAMS: SwansonParams = {
     "matrix_file": DATA_FOLDER
     / "swansonDatasetS3 CNS data matrices JHr1.xlsx",
     "edge_info_file": DATA_FOLDER / "swansonDatasetS2 CNS CRs JHr1.xlsx",
-    "matrix_sheets": [f"CNS2{sex} modules" for sex in ["m", "f"]],
+    "matrix_sheets": [f"CNS2{sex} modules (raw)" for sex in ["m", "f"]],
     "matrix_range": ("T8", "AFU841"),
     "node_info_range": ("A7", "S841"),
     "mrcc_col": "P",
