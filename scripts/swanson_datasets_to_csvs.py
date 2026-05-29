@@ -53,6 +53,23 @@ if __name__ == "__main__":
     for col in [c for c in edge_info.columns if "side" in c]:
         edge_info[col] = edge_info[col].map(morph_dict)
 
+    # Add unique region_ids
+    edge_info["source_region_id"] = (
+        edge_info["connection_origin_region_abbr"]
+        + "_"
+        + edge_info["connection_origin_region_side"].astype(str)
+    )
+
+    edge_info["target_region_id"] = (
+        edge_info["connection_termination_region_abbr"]
+        + "_"
+        + edge_info["connection_termination_region_side"].astype(str)
+    )
+
+    edge_info["edge_id"] = (
+        edge_info["source_region_id"] + "-" + edge_info["target_region_id"]
+    )
+
     edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
 
     # Process each matrix sheet
@@ -66,7 +83,11 @@ if __name__ == "__main__":
         validate_input.validate_adjacency_matrix(matrix)
 
         # Convert matrix to edge table
-        edge_table = convert.convert_matrix_to_edge_table(matrix)
+        edge_table_raw = convert.convert_matrix_to_edge_table(matrix)
+
+        # Normalise: convert 0/1/2/3 → 0
+        edge_table_norm = edge_table_raw.copy()
+        edge_table_norm[np.isin(edge_table_norm[:, 2], range(4)), 2] = 0
 
         # Load and tidy node info
         node_info = excel.get_df_from_excel(
@@ -78,11 +99,14 @@ if __name__ == "__main__":
         node_info.rename(columns={node_info.columns[0]: "Side"}, inplace=True)
         node_info.columns = tidy.rename_columns(node_info.columns)
 
+        # add unique region_id for nodes
+        node_info["region_id"] = node_info["abbr"] + "_" + node_info["side"]
+
         # Save outputs
         sheet_tag = sheet.replace(" ", "_")
         np.savetxt(
             DATA_FOLDER / f"{sheet_tag}_edge_table.csv",
-            edge_table,
+            edge_table_norm,
             fmt="%d",
             delimiter=",",
         )
