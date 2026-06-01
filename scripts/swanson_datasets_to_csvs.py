@@ -34,7 +34,7 @@ SWANSON_PARAMS: SwansonParams = {
     "matrix_file": DATA_FOLDER
     / "swansonDatasetS3 CNS data matrices JHr1.xlsx",
     "edge_info_file": DATA_FOLDER / "swansonDatasetS2 CNS CRs JHr1.xlsx",
-    "matrix_sheets": [f"CNS2{sex} modules (raw)" for sex in ["m", "f"]],
+    "matrix_sheets": [f"CNS2{sex} modules" for sex in ["m", "f"]],
     "matrix_range": ("T8", "AFU841"),
     "node_info_range": ("A7", "S841"),
     "mrcc_col": "P",
@@ -70,22 +70,62 @@ if __name__ == "__main__":
         edge_info["source_region_id"] + "-" + edge_info["target_region_id"]
     )
 
+    raw_connection_strength = {
+        "identity": 0,
+        "no article": 1,
+        "unclear": 2,
+        "absent": 3,
+        "ax.pass.": 4,
+        "v.weak": 5,
+        "weak": 6,
+        "weak-mod": 7,
+        "exists": 8,
+        "moderate": 9,
+        "mod-strong": 10,
+        "strong": 11,
+        "v.strong": 12,
+    }
+    # Map connection_reported_value → raw_connection_strength
+    edge_info["raw_connection_strength"] = (
+        edge_info["connection_reported_value"]
+        .str.lower()
+        .map(raw_connection_strength)
+    )
+
+    edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
+
     # Process each matrix sheet
-    for sheet in SWANSON_PARAMS["matrix_sheets"]:
+    matrix_dict = {}
+    for matrix_id in ["CNS2f", "CNS2m"]:
+        sheet = [
+            sheet
+            for sheet in SWANSON_PARAMS["matrix_sheets"]
+            if matrix_id in sheet
+        ][0]
         # Load and validate matrix and ids
-        matrix = excel.get_df_from_excel(
+        raw_matrix = excel.get_df_from_excel(
             SWANSON_PARAMS["matrix_file"],
-            sheet,
+            f"{sheet} (raw)",
             SWANSON_PARAMS["matrix_range"],
         )
-        validate_input.validate_adjacency_matrix(matrix)
+
+        # Load and validate matrix and ids
+        processed_matrix = excel.get_df_from_excel(
+            SWANSON_PARAMS["matrix_file"],
+            f"{sheet}",
+            SWANSON_PARAMS["matrix_range"],
+        )
+
+        validate_input.validate_adjacency_matrix(raw_matrix)
+        validate_input.validate_adjacency_matrix(processed_matrix)
 
         # Convert matrix to edge table
-        edge_table_raw = convert.convert_matrix_to_edge_table(matrix)
-
-        # Normalise: convert 0/1/2/3 to 0
-        edge_table_norm = edge_table_raw.copy()
-        edge_table_norm[np.isin(edge_table_norm[:, 2], range(4)), 2] = 0
+        edge_table_raw = convert.convert_matrix_to_edge_table(
+            raw_matrix, include_zeros=True
+        )
+        edge_table_processed = convert.convert_matrix_to_edge_table(
+            processed_matrix
+        )
 
         # Load and tidy node info
         node_info = excel.get_df_from_excel(
@@ -102,80 +142,132 @@ if __name__ == "__main__":
             node_info["abbr"] + "_" + node_info["side"].astype(str)
         )
 
+        output_folder = DATA_FOLDER / matrix_id
+        output_folder.mkdir(exist_ok=True)
+
         # Save outputs
-        sheet_tag = sheet.replace(" ", "_")
         np.savetxt(
-            DATA_FOLDER / f"{sheet_tag}_edge_table.csv",
-            edge_table_norm,
+            output_folder / f"{matrix_id}_edge_table.csv",
+            edge_table_processed,
             fmt="%d",
             delimiter=",",
         )
-        node_info.to_csv(DATA_FOLDER / f"{sheet_tag}_info.csv", index=False)
 
-    # Add edge_id to edge_table_raw
-    edge_id = (
-        node_info["region_id"].iloc[edge_table_raw[:, 0]].values
-        + "-"
-        + node_info["region_id"].iloc[edge_table_raw[:, 1]].values
-    )
+        node_info.to_csv(output_folder / f"{matrix_id}_info.csv", index=False)
 
-    edge_table_raw_df = pd.DataFrame(
-        {
-            "source_region_idx": edge_table_raw[:, 0],
-            "target_region_idx": edge_table_raw[:, 1],
-            "raw_connection_strength": edge_table_raw[:, 2],
-            "edge_id": edge_id,
+        if matrix_id == "CNS2m":
+            edge_info_sheet = edge_info[edge_info["male_or_female"] == "male"]
+        elif matrix_id == "CNS2f":
+            edge_info_sheet = edge_info[
+                edge_info["male_or_female"] == "female"
+            ]
+
+        edge_info_sheet.to_csv(
+            output_folder / f"{matrix_id}_edge_info.csv", index=False
+        )
+
+        # Add edge_id to edge_table_raw
+        edge_id = (
+            node_info["region_id"].iloc[edge_table_raw[:, 0]].values
+            + "-"
+            + node_info["region_id"].iloc[edge_table_raw[:, 1]].values
+        )
+
+        edge_table_raw_df = pd.DataFrame(
+            {
+                "source_region_idx": edge_table_raw[:, 0],
+                "target_region_idx": edge_table_raw[:, 1],
+                "raw_connection_strength": edge_table_raw[:, 2],
+                "edge_id": edge_id,
+            }
+        )
+        # also save node_info and edge_table in dict
+        matrix_dict[sheet] = {
+            "edge_table_raw": edge_table_raw_df,
+            "node_info": node_info,
+            "edge_info": edge_info_sheet,
         }
-    )
-
-    merged = edge_info.merge(edge_table_raw_df, on="edge_id", how="left")
 
     #########################################################################
-    #######################       TEST           ############################
+    #######################       CHECKS           ##########################
     #########################################################################
 
     # TODO investigate whether ids are as expected and why merged
     #  is not as expected
 
-    edge_info_ids = set(edge_info["edge_id"])
-    raw_ids = set(edge_table_raw_df["edge_id"])
-
-    matches = edge_info_ids & raw_ids
-    missing_in_raw = edge_info_ids - raw_ids
-    missing_in_info = raw_ids - edge_info_ids
-
-    print("Matches:", len(matches))
-    print("Missing in raw:", len(missing_in_raw))
-    print("Missing in edge_info:", len(missing_in_info))
-
-    node_ids = set(node_info["region_id"])
-    info_ids = set(edge_info["source_region_id"]) | set(
-        edge_info["target_region_id"]
+    node_region_ids = set(node_info["region_id"])
+    edge_region_ids = set(edge_info_sheet["source_region_id"]) | set(
+        edge_info_sheet["target_region_id"]
     )
 
-    print("In node_info but not in edge_info:", len(node_ids - info_ids))
-    print("In edge_info but not in node_info:", len(info_ids - node_ids))
-
-    node_ids = set(node_info["region_id"])
-    info_ids = set(edge_info["source_region_id"]) | set(
-        edge_info["target_region_id"]
+    print(
+        "In node_info but not in edge_info:",
+        len(node_region_ids - edge_region_ids),
+    )
+    print(
+        "In edge_info but not in node_info:",
+        len(edge_region_ids - node_region_ids),
     )
 
-    missing_regions = info_ids - node_ids
-    print(missing_regions)
+    missing_regions = edge_region_ids - node_region_ids
+    print("Missing regions: ", missing_regions)
+
+    ##
+    F, M = matrix_dict["CNS2f modules"], matrix_dict["CNS2m modules"]
+
+    # can the raw strength be determined using the
+    # connection_reported_value col? (there are 13 categories in the key info)
+    # TODO: tell Larry and Joel there is one "V.weak" in their spreadsheet.
+
+    # check whether edge info male_or_female column
+    unique_m_f_labels = set(edge_info["male_or_female"])
+    print("male_or_female contains the following labels: ", unique_m_f_labels)
+
+    for S, sex in zip([F, M], ["female", "male"]):
+        print("----------------------------------------------------------")
+        print(f"{sex.upper()}")
+        print("----------------------------------------------------------")
+        unique_values = set(
+            S["edge_info"]["connection_reported_value"].str.lower()
+        )
+        print(f"{sex} edge_info unique labels:", len(unique_values))
+        print(
+            f"Missing: {
+                set(list(raw_connection_strength.keys())) - unique_values
+            }"
+        )
+
+        # Merge the two sources on edge_id
+        edge_table_and_info = S["edge_info"][
+            ["edge_id", "raw_connection_strength"]
+        ].merge(
+            S["edge_table_raw"],
+            on="edge_id",
+            suffixes=("_edge_info", "_raw_matrix_df"),
+        )
+
+        # Find mismatches between
+        mismatches = edge_table_and_info[
+            edge_table_and_info["raw_connection_strength_edge_info"]
+            != edge_table_and_info["raw_connection_strength_raw_matrix_df"]
+        ]
+
+        if mismatches.empty:
+            print("All raw_connection_strength values match per edge_id.")
+        else:
+            print("Mismatches found:")
+            print(mismatches)
+
+        ###
+        print("")
+        print("MISMATCH 0:")
+        print(mismatches.iloc[0])
+        ###
+        print("MISMATCH 100:")
+        print(mismatches.iloc[100])
+        ###
+        print("MISMATCH 1000:")
+        print(mismatches.iloc[1000])
+        ###
 
     #########################################################################
-
-    edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
-
-    # Consolidate duplicates
-    target = DATA_FOLDER / "node_info.csv"
-    target.unlink(missing_ok=True)
-    files = sorted(DATA_FOLDER.glob("[!edge]*_info.csv"))
-    if files:
-        reference = pd.read_csv(files[0])
-        if any(not pd.read_csv(f).equals(reference) for f in files[1:]):
-            raise ValueError("Info files do not match.")
-        files[0].rename(target)
-        for f in files[1:]:
-            f.unlink()
