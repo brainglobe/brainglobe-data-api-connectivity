@@ -41,6 +41,38 @@ SWANSON_PARAMS: SwansonParams = {
     "mrcc_row": 5,
 }
 
+RAW_CONNECTION_STRENGTH = {
+    "identity": 0,
+    "no article": 1,
+    "unclear": 2,
+    "absent": 3,
+    "ax.pass.": 4,
+    "v.weak": 5,
+    "weak": 6,
+    "weak-mod": 7,
+    "exists": 8,
+    "moderate": 9,
+    "mod-strong": 10,
+    "strong": 11,
+    "v.strong": 12,
+}
+
+PROCESSED_CONNECTION_STRENGTH = {
+    "identity": 0,
+    "no article": 0,
+    "unclear": 0,
+    "absent": 0,
+    "ax.pass.": 2,
+    "v.weak": 1,
+    "weak": 2,
+    "weak-mod": 3,
+    "exists": 4,
+    "moderate": 4,
+    "mod-strong": 5,
+    "strong": 6,
+    "v.strong": 7,
+}
+
 if __name__ == "__main__":
     # Clean and save edge_information CSV
     edge_info = pd.read_excel(SWANSON_PARAMS["edge_info_file"], header=[0, 1])
@@ -70,26 +102,18 @@ if __name__ == "__main__":
         edge_info["source_region_id"] + "-" + edge_info["target_region_id"]
     )
 
-    raw_connection_strength = {
-        "identity": 0,
-        "no article": 1,
-        "unclear": 2,
-        "absent": 3,
-        "ax.pass.": 4,
-        "v.weak": 5,
-        "weak": 6,
-        "weak-mod": 7,
-        "exists": 8,
-        "moderate": 9,
-        "mod-strong": 10,
-        "strong": 11,
-        "v.strong": 12,
-    }
-    # Map connection_reported_value → raw_connection_strength
+    # Map raw_connection_strength
     edge_info["raw_connection_strength"] = (
         edge_info["connection_reported_value"]
         .str.lower()
-        .map(raw_connection_strength)
+        .map(RAW_CONNECTION_STRENGTH)
+    )
+
+    # Map raw_connection_strength
+    edge_info["processed_connection_strength"] = (
+        edge_info["connection_reported_value"]
+        .str.lower()
+        .map(PROCESSED_CONNECTION_STRENGTH)
     )
 
     edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
@@ -123,6 +147,10 @@ if __name__ == "__main__":
         edge_table_raw = convert.convert_matrix_to_edge_table(
             raw_matrix, include_zeros=True
         )
+        edge_table_processed_for_check = convert.convert_matrix_to_edge_table(
+            processed_matrix, include_zeros=True
+        )
+
         edge_table_processed = convert.convert_matrix_to_edge_table(
             processed_matrix
         )
@@ -173,17 +201,19 @@ if __name__ == "__main__":
             + node_info["region_id"].iloc[edge_table_raw[:, 1]].values
         )
 
-        edge_table_raw_df = pd.DataFrame(
+        processed_strength = edge_table_processed_for_check[:, 2]
+        edge_table_df = pd.DataFrame(
             {
                 "source_region_idx": edge_table_raw[:, 0],
                 "target_region_idx": edge_table_raw[:, 1],
                 "raw_connection_strength": edge_table_raw[:, 2],
+                "processed_connection_strength": processed_strength,
                 "edge_id": edge_id,
             }
         )
         # also save node_info and edge_table in dict
         matrix_dict[sheet] = {
-            "edge_table_raw": edge_table_raw_df,
+            "edge_table": edge_table_df,
             "node_info": node_info,
             "edge_info": edge_info_sheet,
         }
@@ -212,9 +242,6 @@ if __name__ == "__main__":
     missing_regions = edge_region_ids - node_region_ids
     print("Missing regions: ", missing_regions)
 
-    ##
-    F, M = matrix_dict["CNS2f modules"], matrix_dict["CNS2m modules"]
-
     # can the raw strength be determined using the
     # connection_reported_value col? (there are 13 categories in the key info)
     # TODO: tell Larry and Joel there is one "V.weak" in their spreadsheet.
@@ -223,6 +250,7 @@ if __name__ == "__main__":
     unique_m_f_labels = set(edge_info["male_or_female"])
     print("male_or_female contains the following labels: ", unique_m_f_labels)
 
+    F, M = matrix_dict["CNS2f modules"], matrix_dict["CNS2m modules"]
     for S, sex in zip([F, M], ["female", "male"]):
         print("----------------------------------------------------------")
         print(f"{sex.upper()}")
@@ -233,15 +261,27 @@ if __name__ == "__main__":
         print(f"{sex} edge_info unique labels:", len(unique_values))
         print(
             f"Missing: {
-                set(list(raw_connection_strength.keys())) - unique_values
+                set(list(RAW_CONNECTION_STRENGTH.keys())) - unique_values
             }"
         )
+
+        edges1 = set(S["edge_info"]["edge_id"])
+        edges2 = set(S["edge_table"]["edge_id"])
+
+        only_in_edge_info = edges1 - edges2
+        only_in_edge_table = edges2 - edges1
+
+        print("")
+        print("Number of edges")
+        print(f"in edge_info but NOT in edge_table: {len(only_in_edge_info)}")
+        print(f"in edge_table but NOT in edge_info: {len(only_in_edge_table)}")
+        print("")
 
         # Merge the two sources on edge_id
         edge_table_and_info = S["edge_info"][
             ["edge_id", "raw_connection_strength"]
         ].merge(
-            S["edge_table_raw"],
+            S["edge_table"],
             on="edge_id",
             suffixes=("_edge_info", "_raw_matrix_df"),
         )
@@ -270,4 +310,83 @@ if __name__ == "__main__":
         print(mismatches.iloc[1000])
         ###
 
+        #######################################################################
+        # Check whether missing regions appear only in male, female (or none)
+        male_regions = set(
+            edge_info[edge_info["male_or_female"] == "male"][
+                "source_region_id"
+            ]
+        ).union(
+            edge_info[edge_info["male_or_female"] == "male"][
+                "target_region_id"
+            ]
+        )
+
+        female_regions = set(
+            edge_info[edge_info["male_or_female"] == "female"][
+                "source_region_id"
+            ]
+        ).union(
+            edge_info[edge_info["male_or_female"] == "female"][
+                "target_region_id"
+            ]
+        )
+
+        missing_in_male = missing_regions - male_regions
+        missing_in_female = missing_regions - female_regions
+
+        print(
+            "Missing regions that DO appear in male:",
+            missing_regions & male_regions,
+        )
+        print(
+            "Missing regions that DO appear in female:",
+            missing_regions & female_regions,
+        )
+
+        print("Missing regions NOT in male:", missing_in_male)
+        print("Missing regions NOT in female:", missing_in_female)
+
     #########################################################################
+
+    # Are there no mismatches when selecting max processed value?
+
+    for S, sex in zip([F, M], ["female", "male"]):
+        # get index of the max processed_connection_strength per edge_id
+        idx = (
+            S["edge_info"]
+            .groupby("edge_id")["processed_connection_strength"]
+            .idxmax()
+        )
+
+        # slice edge_info to get the full rows
+        max_edge_info = S["edge_info"].loc[idx].reset_index(drop=True)
+
+        # rename column for clarity
+        max_edge_info = max_edge_info.rename(
+            columns={
+                "processed_connection_strength": "max_connection_strength"
+            }
+        )
+
+        # merge with matrix raw strengths
+        merged = max_edge_info.merge(
+            S["edge_table"],
+            on="edge_id",
+            how="left",
+            suffixes=("_edge_info", "_raw_matrix"),
+        )
+
+        # mismatches
+        mismatches = merged[
+            merged["raw_connection_strength_edge_info"]
+            != merged["raw_connection_strength_raw_matrix"]
+        ]
+
+        if mismatches.empty:
+            print("All max raw_connection_strength values match per edge_id.")
+        else:
+            print(f"Mismatches found for {sex}:")
+            print(mismatches)
+
+    pass
