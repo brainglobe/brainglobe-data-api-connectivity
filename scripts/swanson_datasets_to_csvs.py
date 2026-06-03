@@ -310,43 +310,6 @@ if __name__ == "__main__":
         print(mismatches.iloc[1000])
         ###
 
-        #######################################################################
-        # Check whether missing regions appear only in male, female (or none)
-        male_regions = set(
-            edge_info[edge_info["male_or_female"] == "male"][
-                "source_region_id"
-            ]
-        ).union(
-            edge_info[edge_info["male_or_female"] == "male"][
-                "target_region_id"
-            ]
-        )
-
-        female_regions = set(
-            edge_info[edge_info["male_or_female"] == "female"][
-                "source_region_id"
-            ]
-        ).union(
-            edge_info[edge_info["male_or_female"] == "female"][
-                "target_region_id"
-            ]
-        )
-
-        missing_in_male = missing_regions - male_regions
-        missing_in_female = missing_regions - female_regions
-
-        print(
-            "Missing regions that DO appear in male:",
-            missing_regions & male_regions,
-        )
-        print(
-            "Missing regions that DO appear in female:",
-            missing_regions & female_regions,
-        )
-
-        print("Missing regions NOT in male:", missing_in_male)
-        print("Missing regions NOT in female:", missing_in_female)
-
     #########################################################################
 
     # Are there no mismatches when selecting max processed value?
@@ -355,7 +318,7 @@ if __name__ == "__main__":
         # get index of the max processed_connection_strength per edge_id
         idx = (
             S["edge_info"]
-            .groupby("edge_id")["processed_connection_strength"]
+            .groupby("edge_id")["raw_connection_strength"]
             .idxmax()
         )
 
@@ -364,9 +327,7 @@ if __name__ == "__main__":
 
         # rename column for clarity
         max_edge_info = max_edge_info.rename(
-            columns={
-                "processed_connection_strength": "max_connection_strength"
-            }
+            columns={"raw_connection_strength": "max_raw_connection_strength"}
         )
 
         # merge with matrix raw strengths
@@ -379,8 +340,8 @@ if __name__ == "__main__":
 
         # mismatches
         mismatches = merged[
-            merged["raw_connection_strength_edge_info"]
-            != merged["raw_connection_strength_raw_matrix"]
+            merged["raw_connection_strength"]
+            != merged["max_raw_connection_strength"]
         ]
 
         if mismatches.empty:
@@ -388,5 +349,15 @@ if __name__ == "__main__":
         else:
             print(f"Mismatches found for {sex}:")
             print(mismatches)
-
+        ###
+        print("")
+        print("MISMATCH 0:")
+        print(mismatches.iloc[0])
+        ###
+        print("MISMATCH 100:")
+        print(mismatches.iloc[100])
+        ###
+        print("MISMATCH 1000:")
+        print(mismatches.iloc[1000])
+        ###
     pass
