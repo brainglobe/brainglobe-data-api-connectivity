@@ -3,8 +3,10 @@ import pandas as pd
 
 
 def convert_matrix_to_edge_table(
-    matrix: pd.DataFrame, include_zeros: bool = False
-) -> np.ndarray:
+    matrix: pd.DataFrame,
+    include_zeros: bool = False,
+    region_ids=pd.Series | None,
+) -> pd.DataFrame:
     """Convert adjacency matrix into an edge table.
 
     Parameters
@@ -15,11 +17,15 @@ def convert_matrix_to_edge_table(
         - If True: use only the non-zero entries of the matrix
         - If False: use all entries of the matrix
 
+    region_ids : pandas.Series or None
+        Optional mapping from matrix indices to region identifiers.
+        If provided, the source and target columns are mapped to these labels.
+
     Returns
-    edge_table: numpy.ndarray
-        with one row per edge and 3 columns:
-            - 1. index of the area from which the edge originates
-            - 2. index of the area to which the edge points
+    edge_table : pandas.DataFrame
+        Table with one row per edge and 3 columns:
+            - 1. region identifier (or index) from which the edge originates
+            - 2. region identifier (or index) to which the edge points
             - 3. edge weight
     """
     adjacency_matrix = matrix.to_numpy()
@@ -33,4 +39,11 @@ def convert_matrix_to_edge_table(
         edge_table = np.column_stack(
             (rows.ravel(), cols.ravel(), weights.ravel())
         )
-    return edge_table
+
+    edge_table_df = pd.DataFrame(edge_table)
+
+    if region_ids is not None:
+        for col in [0, 1]:
+            edge_table_df[col] = edge_table_df[col].map(region_ids)
+
+    return edge_table_df.reset_index(drop=True)

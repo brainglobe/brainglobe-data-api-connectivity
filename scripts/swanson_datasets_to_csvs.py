@@ -11,7 +11,6 @@ Excel files are updated.
 from pathlib import Path
 from typing import TypedDict
 
-import numpy as np
 import pandas as pd
 
 from brainglobe_data_api_connectivity.io import excel, validate_input
@@ -41,38 +40,6 @@ SWANSON_PARAMS: SwansonParams = {
     "mrcc_row": 5,
 }
 
-RAW_CONNECTION_STRENGTH = {
-    "identity": 0,
-    "no article": 1,
-    "unclear": 2,
-    "absent": 3,
-    "ax.pass.": 4,
-    "v.weak": 5,
-    "weak": 6,
-    "weak-mod": 7,
-    "exists": 8,
-    "moderate": 9,
-    "mod-strong": 10,
-    "strong": 11,
-    "v.strong": 12,
-}
-
-PROCESSED_CONNECTION_STRENGTH = {
-    "identity": 0,
-    "no article": 0,
-    "unclear": 0,
-    "absent": 0,
-    "ax.pass.": 2,
-    "v.weak": 1,
-    "weak": 2,
-    "weak-mod": 3,
-    "exists": 4,
-    "moderate": 4,
-    "mod-strong": 5,
-    "strong": 6,
-    "v.strong": 7,
-}
-
 if __name__ == "__main__":
     # Clean and save edge_information CSV
     edge_info = pd.read_excel(SWANSON_PARAMS["edge_info_file"], header=[0, 1])
@@ -85,36 +52,16 @@ if __name__ == "__main__":
     for col in [c for c in edge_info.columns if "side" in c]:
         edge_info[col] = edge_info[col].map(morph_dict)
 
-    # Add unique region_ids
-    edge_info["source_region_id"] = (
-        edge_info["connection_origin_region_abbr"]
-        + "_"
-        + edge_info["connection_origin_region_side"].astype(str)
-    )
+    edge_info["connection_reported_value"] = edge_info[
+        "connection_reported_value"
+    ].str.lower()
 
-    edge_info["target_region_id"] = (
-        edge_info["connection_termination_region_abbr"]
-        + "_"
-        + edge_info["connection_termination_region_side"].astype(str)
-    )
-
-    edge_info["edge_id"] = (
-        edge_info["source_region_id"] + "-" + edge_info["target_region_id"]
-    )
-
-    # Map raw_connection_strength
-    edge_info["raw_connection_strength"] = (
-        edge_info["connection_reported_value"]
-        .str.lower()
-        .map(RAW_CONNECTION_STRENGTH)
-    )
-
-    # Map raw_connection_strength
-    edge_info["processed_connection_strength"] = (
-        edge_info["connection_reported_value"]
-        .str.lower()
-        .map(PROCESSED_CONNECTION_STRENGTH)
-    )
+    for region_type in ["origin", "termination"]:
+        edge_info[f"connection_{region_type}_region_id"] = (
+            edge_info[f"connection_{region_type}_region_abbr"]
+            + "_"
+            + edge_info[f"connection_{region_type}_region_side"].astype(str)
+        )
 
     edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
 
@@ -125,31 +72,6 @@ if __name__ == "__main__":
             for sheet in SWANSON_PARAMS["matrix_sheets"]
             if matrix_id in sheet
         ][0]
-        # Load and validate matrix and ids
-        raw_matrix = excel.get_df_from_excel(
-            SWANSON_PARAMS["matrix_file"],
-            f"{sheet} (raw)",
-            SWANSON_PARAMS["matrix_range"],
-        )
-
-        # Load and validate matrix and ids
-        processed_matrix = excel.get_df_from_excel(
-            SWANSON_PARAMS["matrix_file"],
-            f"{sheet}",
-            SWANSON_PARAMS["matrix_range"],
-        )
-
-        validate_input.validate_adjacency_matrix(raw_matrix)
-        validate_input.validate_adjacency_matrix(processed_matrix)
-
-        # Convert matrix to edge table
-        edge_table_raw = convert.convert_matrix_to_edge_table(
-            raw_matrix, include_zeros=True
-        )
-
-        edge_table_processed = convert.convert_matrix_to_edge_table(
-            processed_matrix
-        )
 
         # Load and tidy node info
         node_info = excel.get_df_from_excel(
@@ -160,24 +82,31 @@ if __name__ == "__main__":
         )
         node_info.rename(columns={node_info.columns[0]: "Side"}, inplace=True)
         node_info.columns = tidy.rename_columns(node_info.columns)
+        region_ids = node_info["abbr"] + "_" + node_info["side"].astype(str)
+        node_info["region_id"] = region_ids
 
-        # add unique region_id for nodes
-        node_info["region_id"] = (
-            node_info["abbr"] + "_" + node_info["side"].astype(str)
+        # Load and validate matrix and ids
+        processed_matrix = excel.get_df_from_excel(
+            SWANSON_PARAMS["matrix_file"],
+            f"{sheet}",
+            SWANSON_PARAMS["matrix_range"],
+        )
+        validate_input.validate_adjacency_matrix(processed_matrix)
+
+        edge_table_processed = convert.convert_matrix_to_edge_table(
+            processed_matrix, region_ids=region_ids
         )
 
+        # Save outputs
         output_folder = DATA_FOLDER / matrix_id
         output_folder.mkdir(exist_ok=True)
 
-        # Save outputs
-        np.savetxt(
-            output_folder / f"{matrix_id}_edge_table.csv",
-            edge_table_processed,
-            fmt="%d",
-            delimiter=",",
+        edge_table_processed.to_csv(
+            output_folder / f"{matrix_id}_edge_table.csv", index=False
         )
-
-        node_info.to_csv(output_folder / f"{matrix_id}_info.csv", index=False)
+        node_info.to_csv(
+            output_folder / f"{matrix_id}_node_info.csv", index=False
+        )
 
         if matrix_id == "CNS2m":
             edge_info_sheet = edge_info[edge_info["male_or_female"] == "male"]
