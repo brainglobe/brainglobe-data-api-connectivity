@@ -57,7 +57,7 @@ if __name__ == "__main__":
     ].str.lower()
 
     for region_type in ["origin", "termination"]:
-        edge_info[f"connection_{region_type}_region_id"] = (
+        edge_info[f"{region_type}_region_id"] = (
             edge_info[f"connection_{region_type}_region_abbr"]
             + "_"
             + edge_info[f"connection_{region_type}_region_side"].astype(str)
