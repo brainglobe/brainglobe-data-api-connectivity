@@ -183,6 +183,7 @@ if __name__ == "__main__":
 
         node_info.to_csv(output_folder / f"{matrix_id}_info.csv", index=False)
 
+        # TODO: QUESTION FEMALE MALE? WHAT DOES GET INCLUDED?
         if matrix_id == "CNS2m":
             edge_info_sheet = edge_info[edge_info["male_or_female"] == "male"]
         elif matrix_id == "CNS2f":
@@ -274,9 +275,7 @@ if __name__ == "__main__":
         print("")
 
         # Merge the two sources on edge_id
-        edge_table_and_info = S["edge_info"][
-            ["edge_id", "raw_connection_strength"]
-        ].merge(
+        edge_table_and_info = S["edge_info"].merge(
             S["edge_table"],
             on="edge_id",
             suffixes=("_edge_info", "_raw_matrix_df"),
@@ -306,52 +305,105 @@ if __name__ == "__main__":
         print(mismatches.iloc[1000])
         ###
 
+        # find edge_id duplicates in edge_table_and_info
+        multiple_edges = edge_table_and_info[
+            edge_table_and_info.duplicated("edge_id", keep=False)
+        ].sort_values("edge_id")
+
+        # select those duplicate edges that have different
+        # "connection_reported_value"
+        multiple_edges_with_diff_values = (
+            multiple_edges.groupby("edge_id")
+            .filter(lambda g: g["connection_reported_value"].nunique() > 1)
+            .sort_values("edge_id")
+        )
+
     #########################################################################
 
     # Are there no mismatches when selecting max processed value?
-
+    ONLY_MAX_RAW_VALUE_FROM_EDGE_INFO = True
     for S, sex in zip([F, M], ["female", "male"]):
         # get index of the max processed_connection_strength per edge_id
-        idx = (
-            S["edge_info"]
-            .groupby("edge_id")["raw_connection_strength"]
-            .idxmax()
+        edge_info_selection = edge_info.sort_values("edge_id")
+        if ONLY_MAX_RAW_VALUE_FROM_EDGE_INFO:
+            idx = (
+                S["edge_info"]
+                .groupby("edge_id")["raw_connection_strength"]
+                .idxmax()
+            )
+
+            # slice edge_info to get the full rows
+            max_edge_info = S["edge_info"].loc[idx]
+
+            # rename column for clarity
+            max_edge_info = max_edge_info.rename(
+                columns={
+                    "raw_connection_strength": "max_raw_connection_strength"
+                }
+            )
+
+            edge_info_selection = max_edge_info
+
+        left = edge_info_selection.rename(
+            columns={
+                c: f"{c}_edge_info"
+                for c in edge_info_selection.columns
+                if c != "edge_id"
+            }
         )
 
-        # slice edge_info to get the full rows
-        max_edge_info = S["edge_info"].loc[idx].reset_index(drop=True)
-
-        # rename column for clarity
-        max_edge_info = max_edge_info.rename(
-            columns={"raw_connection_strength": "max_raw_connection_strength"}
+        right = S["edge_table"].rename(
+            columns={
+                c: f"{c}_matrix"
+                for c in S["edge_table"].columns
+                if c != "edge_id"
+            }
         )
 
-        # merge with matrix raw strengths
-        merged = max_edge_info.merge(
-            S["edge_table"],
-            on="edge_id",
-            how="left",
-            suffixes=("_edge_info", "_raw_matrix"),
-        )
+        merged = left.merge(right, on="edge_id", how="left")
 
         # mismatches
-        mismatches = merged[
-            merged["raw_connection_strength"]
-            != merged["max_raw_connection_strength"]
+        if ONLY_MAX_RAW_VALUE_FROM_EDGE_INFO:
+            mismatches = merged[
+                merged["raw_connection_strength_matrix"]
+                != merged["max_raw_connection_strength_edge_info"]
+            ]
+        else:
+            mismatches = merged[
+                merged["raw_connection_strength_matrix"]
+                != merged["raw_connection_strength_edge_info"]
+            ]
+
+        strong_mismatches = mismatches[
+            mismatches["connection_reported_value_edge_info"] == "strong"
         ]
 
         na_mismatches = mismatches[
-            mismatches["processed_connection_strength_raw_matrix"].isna()
+            mismatches["processed_connection_strength_matrix"].isna()
         ]
-
         na_mismatch_counts = na_mismatches[
-            "connection_reported_value"
+            "connection_reported_value_edge_info"
         ].value_counts()
         print("Counts per NaN mismatch type:")
         print(na_mismatch_counts)
 
-        strong_mismatches = na_mismatches[
-            na_mismatches["connection_reported_value"] == "strong"
+        non_na_mismatches = mismatches[
+            mismatches["processed_connection_strength_matrix"].notna()
+        ]
+        non_na_mismatch_counts = na_mismatches[
+            "connection_reported_value_edge_info"
+        ].value_counts()
+        print("Counts per non-NaN mismatch type:")
+        print(non_na_mismatch_counts)
+
+        strong_na_mismatches = na_mismatches[
+            na_mismatches["connection_reported_value_edge_info"] == "strong"
+        ]
+
+        print(strong_na_mismatches.iloc[0])
+
+        strong_mismatches = mismatches[
+            mismatches["connection_reported_value_edge_info"] == "strong"
         ]
 
         print(strong_mismatches.iloc[0])
@@ -372,4 +424,7 @@ if __name__ == "__main__":
         print("MISMATCH 1000:")
         print(mismatches.iloc[1000])
         ###
+
+        mismatches.to_csv(f"{sex}_mismatches.csv", index=False)
+
     pass
