@@ -242,10 +242,6 @@ if __name__ == "__main__":
     missing_regions = edge_region_ids - node_region_ids
     print("Missing regions: ", missing_regions)
 
-    # can the raw strength be determined using the
-    # connection_reported_value col? (there are 13 categories in the key info)
-    # TODO: tell Larry and Joel there is one "V.weak" in their spreadsheet.
-
     # check whether edge info male_or_female column
     unique_m_f_labels = set(edge_info["male_or_female"])
     print("male_or_female contains the following labels: ", unique_m_f_labels)
