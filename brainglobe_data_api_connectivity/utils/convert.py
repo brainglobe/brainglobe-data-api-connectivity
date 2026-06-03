@@ -30,7 +30,7 @@ def convert_matrix_to_edge_table(
     """
     adjacency_matrix = matrix.to_numpy()
     if include_zeros is False:
-        connections = matrix.to_numpy().nonzero()
+        connections = adjacency_matrix.nonzero()
         weights = adjacency_matrix[connections]
         edge_table = np.column_stack(connections + (weights,))
     else:
