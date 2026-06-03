@@ -340,6 +340,22 @@ if __name__ == "__main__":
             != merged["max_raw_connection_strength"]
         ]
 
+        na_mismatches = mismatches[
+            mismatches["processed_connection_strength_raw_matrix"].isna()
+        ]
+
+        na_mismatch_counts = na_mismatches[
+            "connection_reported_value"
+        ].value_counts()
+        print("Counts per NaN mismatch type:")
+        print(na_mismatch_counts)
+
+        strong_mismatches = na_mismatches[
+            na_mismatches["connection_reported_value"] == "strong"
+        ]
+
+        print(strong_mismatches.iloc[0])
+
         if mismatches.empty:
             print("All max raw_connection_strength values match per edge_id.")
         else:
