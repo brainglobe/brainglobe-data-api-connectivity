@@ -332,6 +332,18 @@ class Connections:
         """
         Report direct connections of a `node`.
 
+        When reporting connections, one can choose to use either the `.network`
+        or `.edge_info` as the source from which to find connections. This
+        choice is handled by the `connections_lookup` option, and should be
+        specified using the `ConnectionsLookup` enum.
+
+        By default the method will return all direct connections that the
+        `node` possesses, split into two lists by whether `node` is the
+        input (source) or output (target) in the direct connection. If only one
+        of these lists is desired, the `node_as` argument can be passed to
+        specify which, and the method will not bother searching for the other.
+        Use the `NodeInConnection` enum to specify.
+
         Args:
             node: int
                 Index of a node in the network to fetch direct connections of.
@@ -350,6 +362,11 @@ class Connections:
                 List of node indexes to which `node` connects as an output
                 node. That is, for each `i` in this list, the edge `(i, node)`
                 exists. Will be empty if only input nodes are requested.
+
+        Raises:
+            TypeError:
+                When attempting to search `.edge_info` for connection reports,
+                but the attribute has not been set.
         """
         connections_as_input = []
         connections_as_output = []

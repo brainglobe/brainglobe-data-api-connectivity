@@ -5,6 +5,11 @@ class NodeInConnection(StrEnum):
     """
     Options for node roles in a connection.
 
+    At a glance:
+    - EITHER : Report all connections involving a node.
+    - INPUT : Report only connections that have a node as the input / source.
+    - OUTPUT : Report only connections that have a node as the output / target.
+
     Edges (connections) are directed, which means that when one asks questions
     about the direct connections that a node has, one may optionally want to
     specify whether the node in question is the `input` (or "source") node in
@@ -23,6 +28,10 @@ class NodeInConnection(StrEnum):
 class ConnectionsLookup(IntEnum):
     """
     Options flag for querying reported connections.
+
+    At a glance:
+    - ALL : Use the `.edge_info`, if it exists, to lookup connections.
+    - REPORTED : Use the `.network` to lookup connections.
 
     The network objects that are constructed by the API use so-called
     "reported" connection data, which is essentially the information per
