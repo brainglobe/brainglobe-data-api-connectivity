@@ -5,6 +5,7 @@ import polars as pl
 from rustworkx import PyDiGraph
 
 from .._types import EdgeTable
+from .node_contractions import sum_of_weights
 from .query_opts import ConnectionsLookup, NodeIs
 
 
@@ -25,11 +26,6 @@ class Connections:
     network: PyDiGraph
     nodes: pl.DataFrame
     collapsed_node_indexes: set[int]
-
-    @staticmethod
-    def __default_contract_weight_fn(*args: float) -> float:
-        """Default weight function for `contract_nodes`."""
-        return sum(args)
 
     @classmethod
     def from_files(
@@ -272,7 +268,7 @@ class Connections:
     def contract_nodes(
         self,
         nodes: Iterable[int],
-        weight_contraction_fn: Callable[..., float] | None = None,
+        weight_contraction_fn: Callable[..., float] = sum_of_weights,
     ) -> int:
         r"""Collapse nodes into a single node.
 
@@ -296,7 +292,8 @@ class Connections:
         based on the weights of the edges $(v_i, v_j)$ (reverse direction is
         treated separately but identically), which are passed as arguments to
         the `weight_contraction_fn` and should return the resulting weight that
-        will be applied to the edge from the super-node to $v_j$.
+        will be applied to the edge from the super-node to $v_j$. Common
+        contraction options are available in the `.node_contractions` module.
 
         Args:
             nodes: Container[int]
@@ -310,9 +307,6 @@ class Connections:
             super_node_index:
                 Internal index of the super-node within the `.network`.
         """
-        if weight_contraction_fn is None:
-            weight_contraction_fn = self.__default_contract_weight_fn
-
         # Perform collapse, delegating to rustworkx and recording collapsed
         # node indexes.
         super_node_data = "Collapse of " + ", ".join(str(i) for i in nodes)
