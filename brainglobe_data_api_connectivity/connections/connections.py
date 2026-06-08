@@ -24,6 +24,7 @@ class Connections:
 
     network: PyDiGraph
     nodes: pl.DataFrame
+    collapsed_node_indexes: set[int]
 
     @staticmethod
     def __default_contract_weight_fn(*args: float) -> float:
@@ -120,6 +121,8 @@ class Connections:
                     row index of a node in `nodes` is being used as the
                     identifier.
         """
+        self.collapsed_node_indexes = set()
+
         index_translations = self._setup_network(
             node_info, edge_table, existing_node_indexing=node_index_column
         )
@@ -279,9 +282,9 @@ class Connections:
         index of this node is returned by the method.
 
         Note that any metadata pertaining to the contracted nodes, and the
-        resulting region, is preserved. The exception being that the nodes
-        which are "contracted" will have their internal indexes set to `null`,
-        to reflect the fact that they are no longer represented in the network.
+        resulting region, is preserved. The nodes that are "contracted" will
+        have their internal indexes added to `collapsed_node_indexes`, to
+        reflect the fact that they are no longer represented in the network.
 
         Collapsing several nodes into a single node removes any edges between
         pairs of said nodes.
@@ -310,21 +313,14 @@ class Connections:
         if weight_contraction_fn is None:
             weight_contraction_fn = self.__default_contract_weight_fn
 
+        # Perform collapse, delegating to rustworkx and recording collapsed
+        # node indexes.
         super_node_data = "Collapse of " + ", ".join(str(i) for i in nodes)
         super_node_index = self.network.contract_nodes(
             nodes, super_node_data, weight_combo_fn=weight_contraction_fn
         )
+        self.collapsed_node_indexes = self.collapsed_node_indexes.union(nodes)
 
-        # Handle metadata fallout, first by mapping all nodes that were part of
-        # the contract to `polars.Null` values.
-        self.nodes = self.nodes.with_columns(
-            pl.col(self._node_internal_index_col)
-            .map_elements(
-                lambda x: None if x in nodes else x,
-                return_dtype=int,
-            )
-            .alias(self._node_internal_index_col)
-        )
         # Handling anything hierarchical should then be done here.
 
         return super_node_index
