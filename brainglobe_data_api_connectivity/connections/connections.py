@@ -351,6 +351,9 @@ class Connections:
                 node. That is, for each `i` in this list, the edge `(i, node)`
                 exists. Will be empty if only input nodes are requested.
         """
+        connections_as_input = []
+        connections_as_output = []
+
         if connections_lookup == ConnectionsLookup.REPORTED:
             if node_as != NodeInConnection.OUTPUT:
                 connections_as_input = [
@@ -369,18 +372,18 @@ class Connections:
             if node_as != NodeInConnection.OUTPUT:
                 connections_as_input = (
                     self.edge_info.filter(
-                        pl.col(self.edge_info_to_col) == node
+                        pl.col(self.edge_info_from_col) == node
                     )
-                    .get_column(self.edge_info_from_col)
+                    .get_column(self.edge_info_to_col)
                     .unique()
                     .to_list()
                 )
             if node_as != NodeInConnection.INPUT:
                 connections_as_output = (
                     self.edge_info.filter(
-                        pl.col(self.edge_info_from_col) == node
+                        pl.col(self.edge_info_to_col) == node
                     )
-                    .get_column(self.edge_info_to_col)
+                    .get_column(self.edge_info_from_col)
                     .unique()
                     .to_list()
                 )
