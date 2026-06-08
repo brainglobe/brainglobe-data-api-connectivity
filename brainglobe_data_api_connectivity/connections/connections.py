@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Container, Hashable, Iterable
+from typing import Any, Callable, Container, Hashable, Iterable
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -269,6 +269,7 @@ class Connections:
         self,
         nodes: Iterable[int],
         weight_contraction_fn: Callable[..., float] = sum_of_weights,
+        super_node_info: dict[str, Any] | None = None,
     ) -> int:
         r"""Collapse nodes into a single node.
 
@@ -281,6 +282,7 @@ class Connections:
         resulting region, is preserved. The nodes that are "contracted" will
         have their internal indexes added to `collapsed_node_indexes`, to
         reflect the fact that they are no longer represented in the network.
+        The super-node will be added to the `.nodes` table.
 
         Collapsing several nodes into a single node removes any edges between
         pairs of said nodes.
@@ -302,6 +304,10 @@ class Connections:
                 Function that dictates behaviour for combining edge weights
                 when nodes are contracted (see above). Default is to sum edge
                 weights.
+            super_node_info: dict[str, Any]
+                Information about the resulting super-node, created by the
+                contraction process. Keys in this dictionary should match
+                column headers in `.nodes`.
 
         Returns:
             super_node_index:
@@ -314,6 +320,19 @@ class Connections:
             nodes, super_node_data, weight_combo_fn=weight_contraction_fn
         )
         self.collapsed_node_indexes = self.collapsed_node_indexes.union(nodes)
+
+        # Add the super-node to `.nodes`. Populate it with any information
+        # provided about the new node, if applicable. Note that information
+        # provided that is not an existing column header is ignored.
+        if super_node_info is None:
+            super_node_info = {}
+        super_node_info = {
+            key: super_node_info.get(key) for key in self.nodes.columns
+        }
+        super_node_info[self._node_internal_index_col] = super_node_index
+        # NOTE: Should consider .vstack() here too, depending on how many times
+        # we expect to contract on a single graph.
+        self.nodes.extend(pl.DataFrame(super_node_info))
 
         # Handling anything hierarchical should then be done here.
 
