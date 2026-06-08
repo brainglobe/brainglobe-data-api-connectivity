@@ -26,8 +26,8 @@ class Connections:
     nodes: pl.DataFrame
 
     @staticmethod
-    def __default_collapse_weight_fn(*args: float) -> float:
-        """Default weight function for `collapse_nodes`."""
+    def __default_contract_weight_fn(*args: float) -> float:
+        """Default weight function for `contract_nodes`."""
         return sum(args)
 
     @classmethod
@@ -266,10 +266,10 @@ class Connections:
             self.edge_info_from_col = None
             self.edge_info_to_col = None
 
-    def collapse_nodes(
+    def contract_nodes(
         self,
         nodes: Iterable[int],
-        weight_collapse_fn: Callable[..., float] | None = None,
+        weight_contraction_fn: Callable[..., float] | None = None,
     ) -> int:
         r"""Collapse nodes into a single node.
 
@@ -278,9 +278,9 @@ class Connections:
         a new node that represents the "super"-node will be added. The
         index of this node is returned by the method.
 
-        Note that any metadata pertaining to the collapsed nodes, and the
+        Note that any metadata pertaining to the contracted nodes, and the
         resulting region, is preserved. The exception being that the nodes
-        which are "collapsed" will have their internal indexes set to `null`,
+        which are "contracted" will have their internal indexes set to `null`,
         to reflect the fact that they are no longer represented in the network.
 
         Collapsing several nodes into a single node removes any edges between
@@ -292,31 +292,31 @@ class Connections:
         the resulting connection between the super-node and $v_j$. This is
         based on the weights of the edges $(v_i, v_j)$ (reverse direction is
         treated separately but identically), which are passed as arguments to
-        the `weight_collapse_fn` and should return the resulting weight that
+        the `weight_contraction_fn` and should return the resulting weight that
         will be applied to the edge from the super-node to $v_j$.
 
         Args:
             nodes: Container[int]
-                Internal node indexes that are to be collapsed.
-            weight_collapse_fn: Callable[..., float] | None
+                Internal node indexes that are to be contracted.
+            weight_contraction_fn: Callable[..., float] | None
                 Function that dictates behaviour for combining edge weights
-                when nodes are collapsed (see above). Default is to sum edge
+                when nodes are contracted (see above). Default is to sum edge
                 weights.
 
         Returns:
             super_node_index:
                 Internal index of the super-node within the `.network`.
         """
-        if weight_collapse_fn is None:
-            weight_collapse_fn = self.__default_collapse_weight_fn
+        if weight_contraction_fn is None:
+            weight_contraction_fn = self.__default_contract_weight_fn
 
         super_node_data = "Collapse of " + ", ".join(str(i) for i in nodes)
         super_node_index = self.network.contract_nodes(
-            nodes, super_node_data, weight_combo_fn=weight_collapse_fn
+            nodes, super_node_data, weight_combo_fn=weight_contraction_fn
         )
 
         # Handle metadata fallout, first by mapping all nodes that were part of
-        # the collapse to `polars.Null` values.
+        # the contract to `polars.Null` values.
         self.nodes = self.nodes.with_columns(
             pl.col(self._node_internal_index_col)
             .map_elements(
