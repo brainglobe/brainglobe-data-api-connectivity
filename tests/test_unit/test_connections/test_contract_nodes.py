@@ -86,6 +86,7 @@ def test_contract_nodes(
     )
 
     G = Connections.from_files(DATA_DIR / node_info, DATA_DIR / edge_table)
+    assert not G.collapsed_node_indexes
     super_index = G.contract_nodes(nodes_to_contract)
 
     network_node_indexes_after_contract = G.network.node_indices()
