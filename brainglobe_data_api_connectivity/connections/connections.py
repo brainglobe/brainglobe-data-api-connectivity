@@ -5,7 +5,7 @@ from typing import Container, Hashable
 import polars as pl
 from rustworkx import PyDiGraph
 
-from ._types import EdgeTable
+from .._types import EdgeTable
 
 
 class NodeInConnection(StrEnum):
