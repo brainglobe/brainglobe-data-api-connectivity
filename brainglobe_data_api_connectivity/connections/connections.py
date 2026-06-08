@@ -324,6 +324,7 @@ class Connections:
         )
 
     def direct_connections(
+        self,
         node: int,
         node_as: NodeInConnection = NodeInConnection.EITHER,
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
@@ -350,3 +351,38 @@ class Connections:
                 node. That is, for each `i` in this list, the edge `(i, node)`
                 exists. Will be empty if only input nodes are requested.
         """
+        if connections_lookup == ConnectionsLookup.REPORTED:
+            if node_as != NodeInConnection.OUTPUT:
+                connections_as_input = [
+                    i for i in self.network.successor_indices(node)
+                ]
+            if node_as != NodeInConnection.INPUT:
+                connections_as_output = [
+                    i for i in self.network.predecessor_indices(node)
+                ]
+        else:
+            if self.edge_info is None:
+                raise TypeError(
+                    "Edge information is not assigned "
+                    "(`self.edge_info` is `None`)"
+                )
+            if node_as != NodeInConnection.OUTPUT:
+                connections_as_input = (
+                    self.edge_info.filter(
+                        pl.col(self.edge_info_to_col) == node
+                    )
+                    .get_column(self.edge_info_from_col)
+                    .unique()
+                    .to_list()
+                )
+            if node_as != NodeInConnection.INPUT:
+                connections_as_output = (
+                    self.edge_info.filter(
+                        pl.col(self.edge_info_from_col) == node
+                    )
+                    .get_column(self.edge_info_to_col)
+                    .unique()
+                    .to_list()
+                )
+
+        return connections_as_input, connections_as_output
