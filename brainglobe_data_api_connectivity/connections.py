@@ -1,3 +1,4 @@
+from enum import IntEnum, StrEnum
 from pathlib import Path
 from typing import Container, Hashable
 
@@ -5,6 +6,45 @@ import polars as pl
 from rustworkx import PyDiGraph
 
 from ._types import EdgeTable
+
+
+class NodeInConnection(StrEnum):
+    """
+    Options for node roles in a connection.
+
+    Edges (connections) are directed, which means that when one asks questions
+    about the direct connections that a node has, one may optionally want to
+    specify whether the node in question is the `input` (or "source") node in
+    the connection, the `output` (or "target") node in the connection, or
+    either.
+
+    These options are standardised as `StrEnum`s to avoid potentially diverging
+    string and language conventions in the API.
+    """
+
+    EITHER = "either"
+    INPUT = "source"
+    OUTPUT = "target"
+
+
+class ConnectionsLookup(IntEnum):
+    """
+    Options flag for querying reported connections.
+
+    The network objects that are constructed by the API use so-called
+    "reported" connection data, which is essentially the information per
+    connection that is deemed the most accurate or reliable. By contrast, the
+    edge information attached to a `Connections` object may contain multiple
+    reports for the same connection, with different levels of strength and
+    accuracy of the reported result. One must decide from which source to draw
+    information about the connections when posing queries about them.
+
+    These options are standardised as `IntEnum`s to avoid potentially diverging
+    conventions in the API.
+    """
+
+    ALL = 0
+    REPORTED = 1
 
 
 class Connections:
@@ -321,3 +361,31 @@ class Connections:
         return self.nodes.filter(
             pl.col(self._node_internal_index_col).is_in(node_indexes)
         )
+
+    def direct_connections(
+        node: int,
+        node_as: NodeInConnection = NodeInConnection.EITHER,
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+    ) -> tuple[list[int], list[int]]:
+        """
+        Report direct connections of a `node`.
+
+        Args:
+            node: int
+                Index of a node in the network to fetch direct connections of.
+            node_as: NodeInConnection
+                The role in the connection that `node` should play, in order to
+                be returned.
+            connections_lookup: ConnectionsLookup
+                The source to use when searching for the `node`s connections.
+
+        Returns:
+            connections_as_input:
+                List of node indexes to which `node` connects as an input node.
+                That is, for each `i` in this list, the edge `(node, i)`
+                exists. Will be empty if only output nodes are requested.
+            connections_as_output:
+                List of node indexes to which `node` connects as an output
+                node. That is, for each `i` in this list, the edge `(i, node)`
+                exists. Will be empty if only input nodes are requested.
+        """
