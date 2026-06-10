@@ -1,4 +1,4 @@
-from enum import IntEnum, StrEnum
+from enum import StrEnum
 
 
 class NodeInConnection(StrEnum):
@@ -25,7 +25,7 @@ class NodeInConnection(StrEnum):
     OUTPUT = "target"
 
 
-class ConnectionsLookup(IntEnum):
+class ConnectionsLookup(StrEnum):
     """
     Options flag for querying reported connections.
 
@@ -45,5 +45,5 @@ class ConnectionsLookup(IntEnum):
     conventions in the API.
     """
 
-    ALL = 0
-    REPORTED = 1
+    ALL = "all"
+    REPORTED = "reported"
