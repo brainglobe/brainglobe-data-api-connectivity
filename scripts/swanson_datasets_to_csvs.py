@@ -11,7 +11,6 @@ Excel files are updated.
 from pathlib import Path
 from typing import TypedDict
 
-import numpy as np
 import pandas as pd
 
 from brainglobe_data_api_connectivity.io import excel, validate_input
@@ -53,20 +52,26 @@ if __name__ == "__main__":
     for col in [c for c in edge_info.columns if "side" in c]:
         edge_info[col] = edge_info[col].map(morph_dict)
 
+    edge_info["connection_reported_value"] = edge_info[
+        "connection_reported_value"
+    ].str.lower()
+
+    for region_type in ["origin", "termination"]:
+        edge_info[f"{region_type}_region_id"] = (
+            edge_info[f"connection_{region_type}_region_abbr"]
+            + "_"
+            + edge_info[f"connection_{region_type}_region_side"].astype(str)
+        )
+
     edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
 
     # Process each matrix sheet
-    for sheet in SWANSON_PARAMS["matrix_sheets"]:
-        # Load and validate matrix and ids
-        matrix = excel.get_df_from_excel(
-            SWANSON_PARAMS["matrix_file"],
-            sheet,
-            SWANSON_PARAMS["matrix_range"],
-        )
-        validate_input.validate_adjacency_matrix(matrix)
-
-        # Convert matrix to edge table
-        edge_table = convert.convert_matrix_to_edge_table(matrix)
+    for matrix_id in ["CNS2f", "CNS2m"]:
+        sheet = [
+            sheet
+            for sheet in SWANSON_PARAMS["matrix_sheets"]
+            if matrix_id in sheet
+        ][0]
 
         # Load and tidy node info
         node_info = excel.get_df_from_excel(
@@ -77,25 +82,39 @@ if __name__ == "__main__":
         )
         node_info.rename(columns={node_info.columns[0]: "Side"}, inplace=True)
         node_info.columns = tidy.rename_columns(node_info.columns)
+        region_ids = node_info["abbr"] + "_" + node_info["side"].astype(str)
+        node_info["region_id"] = region_ids
+
+        # Load and validate matrix and ids
+        processed_matrix = excel.get_df_from_excel(
+            SWANSON_PARAMS["matrix_file"],
+            f"{sheet}",
+            SWANSON_PARAMS["matrix_range"],
+        )
+        validate_input.validate_adjacency_matrix(processed_matrix)
+
+        edge_table_processed = convert.convert_matrix_to_edge_table(
+            processed_matrix, region_ids=region_ids
+        )
 
         # Save outputs
-        sheet_tag = sheet.replace(" ", "_")
-        np.savetxt(
-            DATA_FOLDER / f"{sheet_tag}_edge_table.csv",
-            edge_table,
-            fmt="%d",
-            delimiter=",",
-        )
-        node_info.to_csv(DATA_FOLDER / f"{sheet_tag}_info.csv", index=False)
+        output_folder = DATA_FOLDER / matrix_id
+        output_folder.mkdir(exist_ok=True)
 
-    # Consolidate duplicates
-    target = DATA_FOLDER / "node_info.csv"
-    target.unlink(missing_ok=True)
-    files = sorted(DATA_FOLDER.glob("[!edge]*_info.csv"))
-    if files:
-        reference = pd.read_csv(files[0])
-        if any(not pd.read_csv(f).equals(reference) for f in files[1:]):
-            raise ValueError("Info files do not match.")
-        files[0].rename(target)
-        for f in files[1:]:
-            f.unlink()
+        edge_table_processed.to_csv(
+            output_folder / f"{matrix_id}_edge_table.csv", index=False
+        )
+        node_info.to_csv(
+            output_folder / f"{matrix_id}_node_info.csv", index=False
+        )
+
+        if matrix_id == "CNS2m":
+            edge_info_sheet = edge_info[edge_info["male_or_female"] == "male"]
+        elif matrix_id == "CNS2f":
+            edge_info_sheet = edge_info[
+                edge_info["male_or_female"] == "female"
+            ]
+
+        edge_info_sheet.to_csv(
+            output_folder / f"{matrix_id}_edge_info.csv", index=False
+        )
