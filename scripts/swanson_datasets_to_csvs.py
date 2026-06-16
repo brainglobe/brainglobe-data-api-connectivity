@@ -274,12 +274,40 @@ if __name__ == "__main__":
         print(f"in edge_table but NOT in edge_info: {len(only_in_edge_table)}")
         print("")
 
+        # ---------------------------------------------------------
+        # 2. Rows with selected_report == "yes"
+        # ---------------------------------------------------------
+        selected = S["edge_info"][S["edge_info"]["selected_report"] == "yes"]
+
         # Merge the two sources on edge_id
-        edge_table_and_info = S["edge_info"].merge(
+        edge_table_and_info = selected.merge(
             S["edge_table"],
             on="edge_id",
             suffixes=("_edge_info", "_raw_matrix_df"),
         )
+
+        # ---------------------------------------------------------
+        # A. DUPLICATES (selected edge_id duplicates)
+        # ---------------------------------------------------------
+        duplicated_full = (
+            edge_table_and_info[
+                edge_table_and_info["edge_id"].duplicated(keep=False)
+            ]
+            .copy()
+            .sort_values("edge_id")
+        )
+
+        duplicated_full.to_csv(f"duplicated_{sex}.csv")
+
+        # Keep only duplicates where raw_value differs
+        raw_mismatch_bool = (
+            duplicated_full["raw_connection_strength_raw_matrix_df"]
+            != duplicated_full["raw_connection_strength_edge_info"]
+        )
+
+        raw_mismatch = duplicated_full[raw_mismatch_bool]
+
+        raw_mismatch.to_csv(f"duplicated_{sex}_mismatch.csv")
 
         # Find mismatches between
         mismatches = edge_table_and_info[
@@ -292,19 +320,6 @@ if __name__ == "__main__":
         else:
             print("Mismatches found:")
             print(mismatches)
-
-        ###
-        print("")
-        print("MISMATCH 0:")
-        print(mismatches.iloc[0])
-        ###
-        print("MISMATCH 100:")
-        print(mismatches.iloc[100])
-        ###
-        print("MISMATCH 1000:")
-        print(mismatches.iloc[1000])
-        ###
-
         # find edge_id duplicates in edge_table_and_info
         multiple_edges = edge_table_and_info[
             edge_table_and_info.duplicated("edge_id", keep=False)
@@ -413,17 +428,6 @@ if __name__ == "__main__":
         else:
             print(f"Mismatches found for {sex}:")
             print(mismatches)
-        ###
-        print("")
-        print("MISMATCH 0:")
-        print(mismatches.iloc[0])
-        ###
-        print("MISMATCH 100:")
-        print(mismatches.iloc[100])
-        ###
-        print("MISMATCH 1000:")
-        print(mismatches.iloc[1000])
-        ###
 
         mismatches.to_csv(f"{sex}_mismatches.csv", index=False)
 
