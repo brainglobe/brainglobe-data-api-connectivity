@@ -5,6 +5,7 @@ from brainglobe_data_api_connectivity.dijkstra import dijkstra
 from brainglobe_data_api_connectivity.dijkstra.strategy import (
     DijkstraStrategy,
     ShortestDistance,
+    WidestPath,
 )
 
 
@@ -38,7 +39,15 @@ def network() -> PyDiGraph:
             ShortestDistance(),
             [0],
             0.0,
-            id="Same start and end",
+            id="Same start and end (shortest distance)",
+        ),
+        pytest.param(
+            0,
+            0,
+            WidestPath(),
+            [0],
+            float("inf"),
+            id="Same start and end (widest path)",
         ),
         pytest.param(
             0,
