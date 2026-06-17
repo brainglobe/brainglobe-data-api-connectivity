@@ -5,7 +5,7 @@ class LowestCost(DijkstraStrategy[float]):
     """"""
 
     def _cost_to(self, current_cost: float, next_edge_weight: float) -> float:
-        return 0.0
+        return current_cost + next_edge_weight
 
     def is_lower_cost(self, current_cost: float, proposed_cost: float) -> bool:
-        return False
+        return current_cost > proposed_cost
