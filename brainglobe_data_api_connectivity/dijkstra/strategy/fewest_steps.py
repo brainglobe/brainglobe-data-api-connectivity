@@ -1,11 +1,11 @@
 from ._base import DijkstraStrategy
 
 
-class LowestCost(DijkstraStrategy[float]):
+class FewestSteps(DijkstraStrategy[float]):
     """"""
 
     def _cost_to(self, current_cost: float, next_edge_weight: float) -> float:
-        return current_cost + next_edge_weight
+        return current_cost + 1
 
     def is_better_cost(
         self, current_cost: float, proposed_cost: float

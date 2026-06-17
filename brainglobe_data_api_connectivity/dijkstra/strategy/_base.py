@@ -65,7 +65,7 @@ class DijkstraStrategy(ABC, Generic[Cost]):
         return self._cost_to(current_cost, self.weight_fn(next_edge_weight))
 
     @abstractmethod
-    def is_lower_cost(self, current_cost: Cost, proposed_cost: Cost) -> bool:
+    def is_better_cost(self, current_cost: Cost, proposed_cost: Cost) -> bool:
         """Determine if the proposed cost is better than the current cost.
 
         Return `True` in the event that the proposed cost is superior to the

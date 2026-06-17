@@ -1,19 +1,21 @@
-from ._base import Cost, DijkstraStrategy
+from ._base import DijkstraStrategy
 
 
-class WidestPath(DijkstraStrategy[Cost]):
+class WidestPath(DijkstraStrategy[float]):
     """"""
 
     @classmethod
     def _starting_node_initial_distance(cls):
-        return super()._starting_node_initial_distance()
+        return float("inf")
 
     @classmethod
     def _regular_node_unreached_distance(cls):
-        return super()._regular_node_unreached_distance()
+        return 0.0
 
-    def _cost_to(self, current_cost, next_edge_weight):
-        return super()._cost_to(current_cost, next_edge_weight)
+    def _cost_to(self, current_cost: float, next_edge_weight: float) -> float:
+        return min(current_cost, next_edge_weight)
 
-    def is_lower_cost(self, current_cost, proposed_cost):
-        return super().is_lower_cost(current_cost, proposed_cost)
+    def is_better_cost(
+        self, current_cost: float, proposed_cost: float
+    ) -> bool:
+        return proposed_cost > current_cost
