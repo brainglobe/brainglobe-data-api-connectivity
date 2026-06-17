@@ -11,20 +11,20 @@ class DijkstraStrategy(ABC, Generic[Cost]):
     weight_fn: Callable[[float], float]
 
     @property
-    def starting_node_initial_distance(self) -> float:
-        """Initial distance assigned to the starting node."""
-        return self._starting_node_initial_distance()
+    def starting_node_initial_cost(self) -> float:
+        """Initial cost assigned to the starting node."""
+        return self._starting_node_initial_cost()
 
     @property
-    def regular_node_unreached_distance(self) -> float:
-        """Distance assigned to un-reached regular nodes."""
-        return self._regular_node_unreached_distance()
+    def regular_node_unreached_cost(self) -> float:
+        """Cost assigned to un-reached regular nodes."""
+        return self._regular_node_unreached_cost()
 
     @classmethod
-    def _starting_node_initial_distance(cls) -> float:
-        """Initial distance assigned to the starting node.
+    def _starting_node_initial_cost(cls) -> float:
+        """Initial cost assigned to the starting node.
 
-        Typically the distance to the starting node is 0 for most
+        Typically the cost to the starting node is 0 for most
         implementations of Dijkstra's algorithm, which is what the base class
         implements. However this value can be overwritten by subclasses if
         necessary (hence we use a private function, rather than an attribute).
@@ -32,8 +32,8 @@ class DijkstraStrategy(ABC, Generic[Cost]):
         return 0.0
 
     @classmethod
-    def _regular_node_unreached_distance(cls) -> float:
-        """Placeholder value for the distance to as-of-yet un-reached nodes in
+    def _regular_node_unreached_cost(cls) -> float:
+        """Placeholder value for the cost to as-of-yet un-reached nodes in
         the Dijkstra search.
 
         Typically this value is set to `inf`, since we always want to accept
@@ -50,17 +50,17 @@ class DijkstraStrategy(ABC, Generic[Cost]):
 
     @abstractmethod
     def _cost_to(self, current_cost: Cost, next_edge_weight: float) -> Cost:
-        """Subclass-specific distance calculation logic.
+        """Subclass-specific cost calculation logic.
 
         Note that `next_edge_weight` has already been passed into
         `self.weight_fn`, before this method was called.
         """
 
     def cost_to(self, current_cost: Cost, next_edge_weight: float) -> Cost:
-        """Distance to the next node, given cost of reaching the current node.
+        """cost to the next node, given cost of reaching the current node.
 
         Note that `self.weight_fn` will be called on `next_edge_weight` prior
-        to computing the distance.
+        to computing the cost.
         """
         return self._cost_to(current_cost, self.weight_fn(next_edge_weight))
 

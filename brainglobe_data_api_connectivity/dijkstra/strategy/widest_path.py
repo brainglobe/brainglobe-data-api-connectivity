@@ -5,11 +5,11 @@ class WidestPath(DijkstraStrategy[float]):
     """"""
 
     @classmethod
-    def _starting_node_initial_distance(cls):
+    def _starting_node_initial_cost(cls):
         return float("inf")
 
     @classmethod
-    def _regular_node_unreached_distance(cls):
+    def _regular_node_unreached_cost(cls):
         return 0.0
 
     def _cost_to(self, current_cost: float, next_edge_weight: float) -> float:
