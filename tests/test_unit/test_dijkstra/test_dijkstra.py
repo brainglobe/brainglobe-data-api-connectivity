@@ -4,7 +4,7 @@ from rustworkx import PyDiGraph
 from brainglobe_data_api_connectivity.dijkstra import dijkstra
 from brainglobe_data_api_connectivity.dijkstra.strategy import (
     DijkstraStrategy,
-    ShortestDistance,
+    LowestCost,
     WidestPath,
 )
 
@@ -36,7 +36,7 @@ def network() -> PyDiGraph:
         pytest.param(
             0,
             0,
-            ShortestDistance(),
+            LowestCost(),
             [0],
             0.0,
             id="Same start and end (shortest distance)",
@@ -52,7 +52,7 @@ def network() -> PyDiGraph:
         pytest.param(
             0,
             1,
-            ShortestDistance(),
+            LowestCost(),
             [0, 1],
             1.0,
             id="Direct connection 0 -> 1",
@@ -60,7 +60,7 @@ def network() -> PyDiGraph:
         pytest.param(
             6,
             5,
-            ShortestDistance(),
+            LowestCost(),
             [6, 2, 5],
             4.0,
             id="6 -> 5, multiple viable paths",
@@ -68,7 +68,7 @@ def network() -> PyDiGraph:
         pytest.param(
             1,
             4,
-            ShortestDistance(),
+            LowestCost(),
             [1, 2, 5, 6, 4],
             5.0,
             id="1 -> 4, 2-step worse than 4-step",
@@ -95,7 +95,7 @@ def test_dijkstra_no_path(
     raises_error,
     source: int = 5,
     target: int = 0,
-    strategy: DijkstraStrategy = ShortestDistance(),
+    strategy: DijkstraStrategy = LowestCost(),
     expected_error: Exception = Exception("FIXME"),
 ) -> None:
     """Node 0 in our `network` fixture is always un-reachable from any other

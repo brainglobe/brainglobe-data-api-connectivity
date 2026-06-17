@@ -49,24 +49,20 @@ class DijkstraStrategy(ABC, Generic[Cost]):
         self.weight_fn = weight_fn
 
     @abstractmethod
-    def _distance_to(
-        self, current_cost: Cost, next_edge_weight: float
-    ) -> Cost:
+    def _cost_to(self, current_cost: Cost, next_edge_weight: float) -> Cost:
         """Subclass-specific distance calculation logic.
 
         Note that `next_edge_weight` has already been passed into
         `self.weight_fn`, before this method was called.
         """
 
-    def distance_to(self, current_cost: Cost, next_edge_weight: float) -> Cost:
+    def cost_to(self, current_cost: Cost, next_edge_weight: float) -> Cost:
         """Distance to the next node, given cost of reaching the current node.
 
         Note that `self.weight_fn` will be called on `next_edge_weight` prior
         to computing the distance.
         """
-        return self._distance_to(
-            current_cost, self.weight_fn(next_edge_weight)
-        )
+        return self._cost_to(current_cost, self.weight_fn(next_edge_weight))
 
     @abstractmethod
     def is_lower_cost(self, current_cost: Cost, proposed_cost: Cost) -> bool:
