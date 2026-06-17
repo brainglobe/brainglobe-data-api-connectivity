@@ -8,6 +8,6 @@ class FewestSteps(DijkstraStrategy[float]):
         return current_cost + 1
 
     def is_better_cost(
-        self, current_cost: float, proposed_cost: float
+        self, proposed_cost: float, current_cost: float
     ) -> bool:
-        return current_cost > proposed_cost
+        return proposed_cost < current_cost

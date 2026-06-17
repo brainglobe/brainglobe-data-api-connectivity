@@ -44,6 +44,14 @@ def network() -> PyDiGraph:
             id="Same start and end (shortest distance)",
         ),
         pytest.param(
+            5,
+            0,
+            LowestCost(),
+            None,
+            LowestCost._regular_node_unreached_cost(),
+            id="You shall not path",
+        ),
+        pytest.param(
             0,
             0,
             WidestPath(),
@@ -57,7 +65,15 @@ def network() -> PyDiGraph:
             LowestCost(),
             [0, 1],
             1.0,
-            id="Direct connection 0 -> 1",
+            id="Direct connection 0 -> 1 (lowest cost)",
+        ),
+        pytest.param(
+            0,
+            1,
+            WidestPath(),
+            [0, 1],
+            1.0,
+            id="Direct connection 0 -> 1 (widest path)",
         ),
         pytest.param(
             6,
@@ -65,7 +81,15 @@ def network() -> PyDiGraph:
             LowestCost(),
             [6, 2, 5],
             3.0,
-            id="6 -> 5, multiple viable paths",
+            id="6 -> 5, multiple viable paths (lowest cost)",
+        ),
+        pytest.param(
+            6,
+            5,
+            WidestPath(),
+            [6, 2, 5],
+            1.0,
+            id="6 -> 5, multiple viable paths (widest path)",
         ),
         pytest.param(
             1,
@@ -74,6 +98,14 @@ def network() -> PyDiGraph:
             [1, 2, 5, 6, 4],
             5.0,
             id="1 -> 4, 2-step worse than 4-step",
+        ),
+        pytest.param(
+            0,
+            5,
+            WidestPath(),
+            [0, 5],
+            5.0,
+            id="0 -> 5, strictly wider path",
         ),
     ],
 )
@@ -90,18 +122,3 @@ def test_dijkstra(
 
     assert computed_cost == pytest.approx(expected_cost)
     assert computed_path == expected_path
-
-
-def test_dijkstra_no_path(
-    network: PyDiGraph,
-    raises_error,
-    source: int = 5,
-    target: int = 0,
-    strategy: DijkstraStrategy = LowestCost(),
-    expected_error: Exception = Exception("FIXME"),
-) -> None:
-    """Node 0 in our `network` fixture is always un-reachable from any other
-    node.
-    """
-    with raises_error(expected_error):
-        dijkstra(network, source, target, strategy)
