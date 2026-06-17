@@ -13,6 +13,7 @@ from brainglobe_data_api_connectivity.dijkstra.strategy import (
 def network() -> PyDiGraph:
     """Creates a network on which we can test Dijkstra's algorithm."""
     G = PyDiGraph()
+    G.add_nodes_from(range(7))
     G.add_edges_from(
         [
             (0, 1, 1.0),
@@ -24,6 +25,7 @@ def network() -> PyDiGraph:
             (4, 1, 3.0),
             (4, 5, 4.0),
             (5, 6, 1.0),
+            (6, 2, 1.0),
             (6, 4, 1.0),
         ]
     )
@@ -62,7 +64,7 @@ def network() -> PyDiGraph:
             5,
             LowestCost(),
             [6, 2, 5],
-            4.0,
+            3.0,
             id="6 -> 5, multiple viable paths",
         ),
         pytest.param(
