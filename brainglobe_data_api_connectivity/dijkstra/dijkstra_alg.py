@@ -8,6 +8,16 @@ from .strategy import DijkstraStrategy
 def _compare_nodes(
     node1, node2, node_best_current_cost, strategy: DijkstraStrategy
 ):
+    """Compare two nodes based on their current best cost.
+
+    `node_best_current_cost` maps each node to the best cost found so far for
+    reaching it. The strategy determines which cost is considered better.
+
+    Returns:
+    1:  if node1 has a better cost than node2
+    -1:  of node1 does not have a better cost than node2
+
+    """
     cost_node1 = node_best_current_cost[node1]
     cost_node2 = node_best_current_cost[node2]
     return 1 if strategy.is_better_cost(cost_node1, cost_node2) else -1
@@ -34,7 +44,36 @@ def reconstruct_path(
 def dijkstra(
     network: PyDiGraph, source: int, target: int, strategy: DijkstraStrategy
 ) -> tuple[list[int] | None, float]:
-    """"""
+    """Run a strategy‑guided Dijkstra search to get the best path and cost.
+
+    The search begins at `source` and updates the best known cost to each
+    node that is connected according to a given `strategy`. The strategy
+    controls how edge weights are combined into and how costs are compared
+    (e.g. optimising for the shortest‑path or widest‑path).
+
+    If the `target` cannot be reached, the function returns
+    `(None, unreached_cost)`, where `unreached_cost` is either `0` or `inf`
+    depending on the strategy.
+
+    Otherwise, it returns the optimal path and its cost.
+
+    Args:
+        network: PyDiGraph
+            The directed graph on which the search is performed.
+        source: int
+            Index of the starting node.
+        target: int
+            Index of the destination node.
+        strategy: DijkstraStrategy
+            Object defining how costs are accumulated and compared.
+
+    Returns:
+        path_and_cost:
+            A tuple `(path, cost)` where:
+            - `path` is a list of node indices forming the optimal route, or
+              `None` if the target is unreachable.
+            - `cost` is the final cost according to the strategy.
+    """
     path: list[int] | None
 
     if source == target:
@@ -54,6 +93,10 @@ def dijkstra(
     while candidate_nodes:
 
         def compare_nodes(node1, node2):
+            """Wrapper to make _compare_nodes compatible with `cmp_to_key`.
+
+            `cmp_to_key` expects two arguments.
+            """
             return _compare_nodes(
                 node1, node2, node_best_current_cost, strategy
             )
