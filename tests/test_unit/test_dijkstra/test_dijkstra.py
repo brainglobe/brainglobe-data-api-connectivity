@@ -8,6 +8,8 @@ from brainglobe_data_api_connectivity.dijkstra.strategy import (
     WidestPath,
 )
 
+# TODO: write tests per strategy
+
 
 @pytest.fixture
 def network() -> PyDiGraph:
