@@ -5,7 +5,9 @@ from rustworkx import PyDiGraph
 from .strategy import DijkstraStrategy
 
 
-def _foo(node1, node2, node_best_current_cost, strategy: DijkstraStrategy):
+def _compare_nodes(
+    node1, node2, node_best_current_cost, strategy: DijkstraStrategy
+):
     cost_node1 = node_best_current_cost[node1]
     cost_node2 = node_best_current_cost[node2]
     return 1 if strategy.is_better_cost(cost_node1, cost_node2) else -1
@@ -14,6 +16,7 @@ def _foo(node1, node2, node_best_current_cost, strategy: DijkstraStrategy):
 def reconstruct_path(
     previous_node: dict[int, int], starting_node: int, destination_node: int
 ) -> list[int]:
+    """Reconstruct path from source to target using the predecessor map."""
     path_list = [destination_node]
     current_node = destination_node
     while previous_node[current_node] != starting_node:
@@ -46,10 +49,14 @@ def dijkstra(
     candidate_nodes = {source}
     while candidate_nodes:
 
-        def foo(node1, node2):
-            return _foo(node1, node2, node_best_current_cost, strategy)
+        def compare_nodes(node1, node2):
+            return _compare_nodes(
+                node1, node2, node_best_current_cost, strategy
+            )
 
-        order_of_goodness = sorted(candidate_nodes, key=cmp_to_key(foo))
+        order_of_goodness = sorted(
+            candidate_nodes, key=cmp_to_key(compare_nodes)
+        )
         current_node = order_of_goodness[-1]
         node_is_visited[current_node] = True
         if node_is_visited[target]:
