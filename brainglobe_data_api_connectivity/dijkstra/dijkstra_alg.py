@@ -16,7 +16,11 @@ def _compare_nodes(
 def reconstruct_path(
     previous_node: dict[int, int], starting_node: int, destination_node: int
 ) -> list[int]:
-    """Reconstruct path from source to target using the predecessor map."""
+    """Reconstruct path from source to target the `previous_node` dict.
+
+    The `previous_node` dict maps each reached node to the node from which it
+    was reached with the best cost.
+    """
     path_list = [destination_node]
     current_node = destination_node
     while previous_node[current_node] != starting_node:
