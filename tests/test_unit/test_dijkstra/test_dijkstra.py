@@ -4,6 +4,7 @@ from rustworkx import PyDiGraph
 from brainglobe_data_api_connectivity.dijkstra import dijkstra
 from brainglobe_data_api_connectivity.dijkstra.strategy import (
     DijkstraStrategy,
+    FewestSteps,
     LowestCost,
     WidestPath,
 )
@@ -124,3 +125,62 @@ def test_dijkstra(
 
     assert computed_cost == pytest.approx(expected_cost)
     assert computed_path == expected_path
+
+
+@pytest.fixture
+def simple_network() -> PyDiGraph:
+    """Creates a simple network on which we can test Dijkstra's algorithm.
+
+    (0) ── 4.0 ──► (2)
+    (0) ── 5.0 ──► (1) ── 5.0 ──► (2)
+    (0) ── 1.0 ──► (3) ── 2.0 ──► (2)
+    """
+    G = PyDiGraph()
+    G.add_nodes_from(range(4))
+    G.add_edges_from(
+        [
+            (0, 2, 4.0),
+            (0, 1, 5.0),
+            (1, 2, 5.0),
+            (0, 3, 1.0),
+            (3, 2, 2.0),
+        ]
+    )
+    return G
+
+
+@pytest.mark.parametrize(
+    ("strategy", "expected_path", "expected_cost"),
+    [
+        pytest.param(
+            LowestCost(),
+            [0, 3, 2],
+            3.0,
+            id="lowest cost",
+        ),
+        pytest.param(
+            WidestPath(),
+            [0, 1, 2],
+            5.0,
+            id="widest path",
+        ),
+        pytest.param(
+            FewestSteps(),
+            [0, 2],
+            1.0,
+            id="fewest steps",
+        ),
+    ],
+)
+def test_strategies_on_simple_network(
+    simple_network: PyDiGraph,
+    strategy: DijkstraStrategy,
+    expected_path: list[int],
+    expected_cost: float,
+):
+    """Test that each Dijkstra strategy returns expected path and cost."""
+    source = 0
+    target = 2
+    path, cost = dijkstra(simple_network, source, target, strategy)
+    assert path == expected_path
+    assert cost == expected_cost
