@@ -269,7 +269,7 @@ def test_dijkstra_strategies_unreachable_target(
         ),
     ],
 )
-def test_dijkstra_cycle_handling(
+def test_dijkstra_widest_path_cycle(
     strategy: DijkstraStrategy,
     expected_path: list[int],
     expected_cost: float,
@@ -291,6 +291,48 @@ def test_dijkstra_cycle_handling(
             (1, 2, 1.0),
             (2, 1, 10.0),
             (2, 3, 1.0),
+        ]
+    )
+    source = 0
+    target = 3
+    path, cost = dijkstra(cycle_network, source, target, strategy)
+    assert path == expected_path
+    assert cost == expected_cost
+
+
+@pytest.mark.parametrize(
+    ("strategy", "expected_path", "expected_cost"),
+    [
+        pytest.param(
+            LowestCost(),
+            [0, 1, 2, 3],
+            1002.0,
+            id="widest path",
+        ),
+    ],
+)
+def test_dijkstra_lowest_cost_cycle(
+    strategy: DijkstraStrategy,
+    expected_path: list[int],
+    expected_cost: float,
+):
+    """Test that cycles do not affect lowest cost
+
+    Graph with a cycle:
+
+        (0) ── 1.0 ──► (1) ── 1.0 ──► (2) ── 1000.0 ──► (3)
+                        ▲              │
+                        └───── 0.01 ───┘
+
+    """
+    cycle_network = PyDiGraph()
+    cycle_network.add_nodes_from(range(4))
+    cycle_network.add_edges_from(
+        [
+            (0, 1, 1.0),
+            (1, 2, 1.0),
+            (2, 1, 0.01),
+            (2, 3, 1000.0),
         ]
     )
     source = 0
