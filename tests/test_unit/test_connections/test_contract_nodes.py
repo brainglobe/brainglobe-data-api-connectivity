@@ -12,7 +12,6 @@ from brainglobe_data_api_connectivity.connections import Connections
         "node_info",
         "edge_table",
         "nodes_to_contract",
-        "provide_super_node_info",
     ),
     [
         pytest.param(
