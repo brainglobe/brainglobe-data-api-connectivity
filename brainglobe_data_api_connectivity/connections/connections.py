@@ -4,7 +4,8 @@ from typing import Container, Hashable
 import polars as pl
 from rustworkx import PyDiGraph
 
-from ._types import EdgeTable
+from .._types import EdgeTable
+from .query_opts import ConnectionsLookup, NodeIs
 
 
 class Connections:
@@ -321,3 +322,87 @@ class Connections:
         return self.nodes.filter(
             pl.col(self._node_internal_index_col).is_in(node_indexes)
         )
+
+    def direct_connections(
+        self,
+        node: int,
+        node_as: NodeIs = NodeIs.ANY,
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+    ) -> tuple[list[int], list[int]]:
+        """
+        Report direct connections of a `node`.
+
+        When reporting connections, one can choose to use either the `.network`
+        or `.edge_info` as the source from which to find connections. This
+        choice is handled by the `connections_lookup` option, and should be
+        specified using the `ConnectionsLookup` enum.
+
+        By default the method will return all direct connections that the
+        `node` possesses, split into two lists by whether `node` is the
+        input (source) or output (target) in the direct connection. If only one
+        of these lists is desired, the `node_as` argument can be passed to
+        specify which, and the method will not bother searching for the other.
+        Use the `NodeIs` enum to specify.
+
+        Args:
+            node: int
+                Index of a node in the network to fetch direct connections of.
+            node_as: NodeIs
+                The role in the connection that `node` should play, in order to
+                be returned.
+            connections_lookup: ConnectionsLookup
+                The source to use when searching for the `node`s connections.
+
+        Returns:
+            connections_as_input:
+                List of node indexes to which `node` connects as an input node.
+                That is, for each `i` in this list, the edge `(node, i)`
+                exists. Will be empty if only output nodes are requested.
+            connections_as_output:
+                List of node indexes to which `node` connects as an output
+                node. That is, for each `i` in this list, the edge `(i, node)`
+                exists. Will be empty if only input nodes are requested.
+
+        Raises:
+            TypeError:
+                When attempting to search `.edge_info` for connection reports,
+                but the attribute has not been set.
+        """
+        connections_as_input = []
+        connections_as_output = []
+
+        if connections_lookup == ConnectionsLookup.REPORTED:
+            if node_as != NodeIs.OUTPUT:
+                connections_as_input = [
+                    i for i in self.network.successor_indices(node)
+                ]
+            if node_as != NodeIs.INPUT:
+                connections_as_output = [
+                    i for i in self.network.predecessor_indices(node)
+                ]
+        else:
+            if self.edge_info is None:
+                raise TypeError(
+                    "Edge information is not assigned "
+                    "(`self.edge_info` is `None`)"
+                )
+            if node_as != NodeIs.OUTPUT:
+                connections_as_input = (
+                    self.edge_info.filter(
+                        pl.col(self.edge_info_from_col) == node
+                    )
+                    .get_column(self.edge_info_to_col)
+                    .unique()
+                    .to_list()
+                )
+            if node_as != NodeIs.INPUT:
+                connections_as_output = (
+                    self.edge_info.filter(
+                        pl.col(self.edge_info_to_col) == node
+                    )
+                    .get_column(self.edge_info_from_col)
+                    .unique()
+                    .to_list()
+                )
+
+        return connections_as_input, connections_as_output
