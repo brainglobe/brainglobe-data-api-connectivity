@@ -8,7 +8,12 @@ from brainglobe_data_api_connectivity.connections import Connections
 
 
 @pytest.mark.parametrize(
-    ("node_info", "edge_table", "nodes_to_contract"),
+    (
+        "node_info",
+        "edge_table",
+        "nodes_to_contract",
+        "provide_super_node_info",
+    ),
     [
         pytest.param(
             "small-nodes.csv",
@@ -84,6 +89,7 @@ def test_contract_nodes(
 
     network_node_indexes_after_contract = G.network.node_indices()
     assert super_index in G.network.node_indices()
+    assert super_index in G.nodes.get_column(G._node_internal_index_col)
     assert all(
         i not in network_node_indexes_after_contract for i in nodes_to_contract
     )
