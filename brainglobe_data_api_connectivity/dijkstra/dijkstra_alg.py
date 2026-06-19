@@ -24,17 +24,17 @@ def _compare_nodes(
 
 
 def reconstruct_path(
-    previous_node: dict[int, int], starting_node: int, destination_node: int
+    path_map: dict[int, int], starting_node: int, destination_node: int
 ) -> list[int]:
-    """Reconstruct path from source to target the `previous_node` dict.
+    """Reconstruct path from source to target the `path_map` dict.
 
-    The `previous_node` dict maps each reached node to the node from which it
+    The `path_map` dict maps each reached node to the node from which it
     was reached with the best cost.
     """
     path_list = [destination_node]
     current_node = destination_node
-    while previous_node[current_node] != starting_node:
-        current_node = previous_node[current_node]
+    while path_map[current_node] != starting_node:
+        current_node = path_map[current_node]
         path_list.append(current_node)
     path_list.append(starting_node)
     path_list.reverse()
@@ -87,7 +87,7 @@ def dijkstra(
     }
 
     node_best_current_cost[source] = strategy.starting_node_initial_cost
-    previous_node = {source: source}
+    path_map = {source: source}
 
     candidate_nodes = {source}
     while candidate_nodes:
@@ -124,7 +124,7 @@ def dijkstra(
                 proposed_cost, node_best_current_cost[s]
             ):
                 node_best_current_cost[s] = proposed_cost
-                previous_node[s] = current_node
+                path_map[s] = current_node
 
         unvisited_nodes = {
             n for n, is_visited in node_is_visited.items() if not is_visited
@@ -141,6 +141,6 @@ def dijkstra(
     if cost == strategy.regular_node_unreached_cost:
         path = None
     else:
-        path = reconstruct_path(previous_node, source, target)
+        path = reconstruct_path(path_map, source, target)
 
     return path, cost
