@@ -131,9 +131,10 @@ def test_dijkstra(
 def simple_network() -> PyDiGraph:
     """Creates a simple network on which we can test Dijkstra's algorithm.
 
-    (0) ── 4.0 ──► (2)
-    (0) ── 5.0 ──► (1) ── 5.0 ──► (2)
-    (0) ── 1.0 ──► (3) ── 2.0 ──► (2)
+    The network includes the following routes from node 0 to node 2:
+        - (0) ── 4.0 ──► (2)
+        - (0) ── 5.0 ──► (1) ── 5.0 ──► (2)
+        - (0) ── 1.0 ──► (3) ── 2.0 ──► (2)
     """
     G = PyDiGraph()
     G.add_nodes_from(range(4))
