@@ -220,3 +220,39 @@ def test_dijkstra_strategies_same_source_and_target(
     assert path == [node]
     assert cost == strategy._starting_node_initial_cost()
     assert cost == expected_cost
+
+
+@pytest.mark.parametrize(
+    ("strategy", "expected_cost"),
+    [
+        pytest.param(
+            LowestCost(),
+            float("inf"),
+            id="lowest cost: zero cost",
+        ),
+        pytest.param(
+            WidestPath(),
+            0.0,
+            id="widest path: infinite cost",
+        ),
+        pytest.param(
+            FewestSteps(),
+            float("inf"),
+            id="fewest steps: zero cost",
+        ),
+    ],
+)
+def test_dijkstra_strategies_unreachable_target(
+    simple_network: PyDiGraph,
+    strategy: DijkstraStrategy,
+    expected_cost: float,
+):
+    """Test returned path and cost when source equals target."""
+
+    source = 2
+    target = 0
+    path, cost = dijkstra(simple_network, source, target, strategy)
+
+    assert path is None
+    assert cost == strategy._regular_node_unreached_cost()
+    assert cost == expected_cost
