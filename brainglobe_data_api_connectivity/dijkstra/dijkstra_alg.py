@@ -81,12 +81,12 @@ def dijkstra(
         path = [source]
         return path, cost
 
-    node_is_visited = {n: False for n in network.node_indices()}
-    node_best_current_cost = {
+    is_visited = {n: False for n in network.node_indices()}
+    best_current_cost = {
         n: strategy.regular_node_unreached_cost for n in network.node_indices()
     }
 
-    node_best_current_cost[source] = strategy.starting_node_initial_cost
+    best_current_cost[source] = strategy.starting_node_initial_cost
     path_map = {source: source}
 
     candidate_nodes = {source}
@@ -97,47 +97,43 @@ def dijkstra(
 
             `cmp_to_key` expects two arguments.
             """
-            return _compare_nodes(
-                node1, node2, node_best_current_cost, strategy
-            )
+            return _compare_nodes(node1, node2, best_current_cost, strategy)
 
         order_of_goodness = sorted(
             candidate_nodes, key=cmp_to_key(compare_nodes)
         )
         current_node = order_of_goodness[-1]
-        node_is_visited[current_node] = True
-        if node_is_visited[target]:
+        is_visited[current_node] = True
+        if is_visited[target]:
             break
 
         successors = [
             n
             for n in network.successor_indices(current_node)
-            if not node_is_visited[n]
+            if not is_visited[n]
         ]
 
         for s in successors:
             weight_s = network.get_edge_data(current_node, s)
             proposed_cost = strategy.cost_to(
-                node_best_current_cost[current_node], weight_s
+                best_current_cost[current_node], weight_s
             )
-            if strategy.is_better_cost(
-                proposed_cost, node_best_current_cost[s]
-            ):
-                node_best_current_cost[s] = proposed_cost
+            if strategy.is_better_cost(proposed_cost, best_current_cost[s]):
+                best_current_cost[s] = proposed_cost
                 path_map[s] = current_node
 
         unvisited_nodes = {
-            n for n, is_visited in node_is_visited.items() if not is_visited
+            n for n, is_visited in is_visited.items() if not is_visited
         }
 
         reachable_nodes = {
             n
-            for n, best_current_cost in node_best_current_cost.items()
+            for n, best_current_cost in best_current_cost.items()
             if best_current_cost != strategy.regular_node_unreached_cost
         }
         candidate_nodes = unvisited_nodes.intersection(reachable_nodes)
 
-    cost = node_best_current_cost[target]
+    cost = best_current_cost[target]
     if cost == strategy.regular_node_unreached_cost:
         path = None
     else:
