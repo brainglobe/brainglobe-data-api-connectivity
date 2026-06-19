@@ -5,7 +5,7 @@ import polars as pl
 from rustworkx import PyDiGraph
 
 from .._types import EdgeTable
-from .query_opts import ConnectionsLookup, NodeInConnection
+from .query_opts import ConnectionsLookup, NodeIs
 
 
 class Connections:
@@ -326,7 +326,7 @@ class Connections:
     def direct_connections(
         self,
         node: int,
-        node_as: NodeInConnection = NodeInConnection.EITHER,
+        node_as: NodeIs = NodeIs.ANY,
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
     ) -> tuple[list[int], list[int]]:
         """
@@ -342,12 +342,12 @@ class Connections:
         input (source) or output (target) in the direct connection. If only one
         of these lists is desired, the `node_as` argument can be passed to
         specify which, and the method will not bother searching for the other.
-        Use the `NodeInConnection` enum to specify.
+        Use the `NodeIs` enum to specify.
 
         Args:
             node: int
                 Index of a node in the network to fetch direct connections of.
-            node_as: NodeInConnection
+            node_as: NodeIs
                 The role in the connection that `node` should play, in order to
                 be returned.
             connections_lookup: ConnectionsLookup
@@ -372,11 +372,11 @@ class Connections:
         connections_as_output = []
 
         if connections_lookup == ConnectionsLookup.REPORTED:
-            if node_as != NodeInConnection.OUTPUT:
+            if node_as != NodeIs.OUTPUT:
                 connections_as_input = [
                     i for i in self.network.successor_indices(node)
                 ]
-            if node_as != NodeInConnection.INPUT:
+            if node_as != NodeIs.INPUT:
                 connections_as_output = [
                     i for i in self.network.predecessor_indices(node)
                 ]
@@ -386,7 +386,7 @@ class Connections:
                     "Edge information is not assigned "
                     "(`self.edge_info` is `None`)"
                 )
-            if node_as != NodeInConnection.OUTPUT:
+            if node_as != NodeIs.OUTPUT:
                 connections_as_input = (
                     self.edge_info.filter(
                         pl.col(self.edge_info_from_col) == node
@@ -395,7 +395,7 @@ class Connections:
                     .unique()
                     .to_list()
                 )
-            if node_as != NodeInConnection.INPUT:
+            if node_as != NodeIs.INPUT:
                 connections_as_output = (
                     self.edge_info.filter(
                         pl.col(self.edge_info_to_col) == node

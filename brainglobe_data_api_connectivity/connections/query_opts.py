@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class NodeInConnection(StrEnum):
+class NodeIs(StrEnum):
     """
     Options for node roles in a connection.
 
@@ -14,13 +14,13 @@ class NodeInConnection(StrEnum):
     about the direct connections that a node has, one may optionally want to
     specify whether the node in question is the `input` (or "source") node in
     the connection, the `output` (or "target") node in the connection, or
-    either.
+    an input or an output ("any").
 
     These options are standardised as `StrEnum`s to avoid potentially diverging
     string and language conventions in the API.
     """
 
-    EITHER = "either"
+    ANY = "any"
     INPUT = "source"
     OUTPUT = "target"
 

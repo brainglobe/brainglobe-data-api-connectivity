@@ -6,7 +6,7 @@ import pytest
 from brainglobe_data_api_connectivity.connections import Connections
 from brainglobe_data_api_connectivity.connections.query_opts import (
     ConnectionsLookup,
-    NodeInConnection,
+    NodeIs,
 )
 
 
@@ -40,7 +40,7 @@ def test_direct_connections_no_edge_info(
     [
         pytest.param(
             2,
-            NodeInConnection.EITHER,
+            NodeIs.ANY,
             ConnectionsLookup.REPORTED,
             [0, 1, 3],
             [0],
@@ -48,7 +48,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             2,
-            NodeInConnection.INPUT,
+            NodeIs.INPUT,
             ConnectionsLookup.REPORTED,
             [0, 1, 3],
             [],
@@ -56,7 +56,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             2,
-            NodeInConnection.OUTPUT,
+            NodeIs.OUTPUT,
             ConnectionsLookup.REPORTED,
             [],
             [0],
@@ -64,7 +64,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             2,
-            NodeInConnection.EITHER,
+            NodeIs.ANY,
             ConnectionsLookup.REPORTED,
             [0, 1, 3],
             [0],
@@ -72,7 +72,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             2,
-            NodeInConnection.INPUT,
+            NodeIs.INPUT,
             ConnectionsLookup.ALL,
             [0, 1, 3],
             [],
@@ -80,7 +80,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             2,
-            NodeInConnection.OUTPUT,
+            NodeIs.OUTPUT,
             ConnectionsLookup.ALL,
             [],
             [0],
@@ -88,7 +88,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             0,
-            NodeInConnection.EITHER,
+            NodeIs.ANY,
             ConnectionsLookup.REPORTED,
             [0, 1, 2, 4],
             [0, 1, 2, 3],
@@ -96,7 +96,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             0,
-            NodeInConnection.EITHER,
+            NodeIs.ANY,
             ConnectionsLookup.ALL,
             [0, 1, 2, 4],
             [0, 1, 2, 3],
@@ -104,7 +104,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             4,
-            NodeInConnection.INPUT,
+            NodeIs.INPUT,
             ConnectionsLookup.ALL,
             [1, 3],
             [],
@@ -112,7 +112,7 @@ def test_direct_connections_no_edge_info(
         ),
         pytest.param(
             4,
-            NodeInConnection.INPUT,
+            NodeIs.INPUT,
             ConnectionsLookup.REPORTED,
             [1],
             [],
@@ -122,7 +122,7 @@ def test_direct_connections_no_edge_info(
 )
 def test_direct_connections(
     node: int,
-    node_as: NodeInConnection,
+    node_as: NodeIs,
     report_or_all: ConnectionsLookup,
     expected_as_input: list[int],
     expected_as_output: list[int],
