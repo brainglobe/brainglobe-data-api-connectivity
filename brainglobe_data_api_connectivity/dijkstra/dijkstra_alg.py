@@ -17,6 +17,7 @@ def _compare_nodes(
     1:  if node1 has a better cost than node2
     -1:  of node1 does not have a better cost than node2
 
+    This allows the nodes to be sorted from worst to best.
     """
     cost_node1 = node_best_current_cost[node1]
     cost_node2 = node_best_current_cost[node2]
@@ -59,19 +60,19 @@ def dijkstra(
 
     Args:
         network: PyDiGraph
-            The directed graph on which the search is performed.
+            The network on which the search is performed.
         source: int
             Index of the starting node.
         target: int
             Index of the destination node.
         strategy: DijkstraStrategy
-            Object defining how costs are accumulated and compared.
+            Defines how costs are determined and compared.
 
     Returns:
         path_and_cost:
             A tuple `(path, cost)` where:
-            - `path` is a list of node indices forming the optimal route, or
-              `None` if the target is unreachable.
+            - `path` is a list of node indices forming the optimal route from
+              source to target, or `None` if the target is unreachable.
             - `cost` is the final cost according to the strategy.
     """
     path: list[int] | None
