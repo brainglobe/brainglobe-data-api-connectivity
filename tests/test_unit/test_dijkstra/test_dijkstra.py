@@ -185,3 +185,39 @@ def test_dijkstra_strategies_on_simple_network(
     path, cost = dijkstra(simple_network, source, target, strategy)
     assert path == expected_path
     assert cost == expected_cost
+
+
+@pytest.mark.parametrize(
+    ("strategy", "expected_cost"),
+    [
+        pytest.param(
+            LowestCost(),
+            0.0,
+            id="lowest cost: zero cost",
+        ),
+        pytest.param(
+            WidestPath(),
+            float("inf"),
+            id="widest path: infinite cost",
+        ),
+        pytest.param(
+            FewestSteps(),
+            0.0,
+            id="fewest steps: zero cost",
+        ),
+    ],
+)
+def test_same_target_and_source(
+    simple_network: PyDiGraph,
+    strategy: DijkstraStrategy,
+    expected_cost: float,
+):
+    """Verify that each strategy returns the correct trivial path and cost
+    when source equals target."""
+
+    node = 1
+    path, cost = dijkstra(simple_network, node, node, strategy)
+
+    assert path == [node]
+    assert cost == strategy._starting_node_initial_cost()
+    assert cost == expected_cost
