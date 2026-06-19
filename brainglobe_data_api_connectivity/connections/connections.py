@@ -300,11 +300,11 @@ class Connections:
         Args:
             nodes: Container[int]
                 Internal node indexes that are to be contracted.
-            weight_contraction_fn: Callable[..., float] | None
+            weight_contraction_fn: Callable[..., float]
                 Function that dictates behaviour for combining edge weights
                 when nodes are contracted (see above). Default is to sum edge
                 weights.
-            super_node_info: dict[str, Any]
+            super_node_info: dict[str, Any] | None
                 Information about the resulting super-node, created by the
                 contraction process. Keys in this dictionary should match
                 column headers in `.nodes`.
