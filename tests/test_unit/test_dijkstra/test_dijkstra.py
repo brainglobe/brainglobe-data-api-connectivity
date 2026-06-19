@@ -173,7 +173,7 @@ def simple_network() -> PyDiGraph:
         ),
     ],
 )
-def test_strategies_on_simple_network(
+def test_dijkstra_strategies_on_simple_network(
     simple_network: PyDiGraph,
     strategy: DijkstraStrategy,
     expected_path: list[int],
