@@ -173,13 +173,13 @@ def simple_network() -> PyDiGraph:
         ),
     ],
 )
-def test_dijkstra_strategies_on_simple_network(
+def test_dijkstra_strategies_0_to_2(
     simple_network: PyDiGraph,
     strategy: DijkstraStrategy,
     expected_path: list[int],
     expected_cost: float,
 ):
-    """Test that each Dijkstra strategy returns expected path and cost."""
+    """Test returned path and cost when source is 0 and target is 2."""
     source = 0
     target = 2
     path, cost = dijkstra(simple_network, source, target, strategy)
@@ -207,13 +207,12 @@ def test_dijkstra_strategies_on_simple_network(
         ),
     ],
 )
-def test_same_target_and_source(
+def test_dijkstra_strategies_same_source_and_target(
     simple_network: PyDiGraph,
     strategy: DijkstraStrategy,
     expected_cost: float,
 ):
-    """Verify that each strategy returns the correct trivial path and cost
-    when source equals target."""
+    """Test returned path and cost when source equals target."""
 
     node = 1
     path, cost = dijkstra(simple_network, node, node, strategy)
