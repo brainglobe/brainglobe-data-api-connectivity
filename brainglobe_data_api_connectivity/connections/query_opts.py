@@ -41,7 +41,7 @@ class ConnectionsLookup(StrEnum):
     accuracy of the reported result. One must decide from which source to draw
     information about the connections when posing queries about them.
 
-    These options are standardised as `IntEnum`s to avoid potentially diverging
+    These options are standardised as `StrEnum`s to avoid potentially diverging
     conventions in the API.
     """
 
