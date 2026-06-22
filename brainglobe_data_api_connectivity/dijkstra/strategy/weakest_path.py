@@ -1,10 +1,11 @@
 from ._base import DijkstraStrategy
 
 
-class LowestCost(DijkstraStrategy[float]):
-    """Strategy that finds the path with the lowest cost.
+class WeakestPath(DijkstraStrategy[float]):
+    """Strategy that finds the weakest path.
 
-    Costs is determined by adding edge weights, lower totals are considered
+    The weakest path is the path with the lowest cost. Cost in this case are
+    determined by adding edge weights, lower totals are considered
     better.
 
     If edge weights reflect connection strength between brain regions,

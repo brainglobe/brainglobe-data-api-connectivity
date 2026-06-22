@@ -5,7 +5,7 @@ from brainglobe_data_api_connectivity.dijkstra import dijkstra
 from brainglobe_data_api_connectivity.dijkstra.strategy import (
     DijkstraStrategy,
     FewestSteps,
-    LowestCost,
+    WeakestPath,
     WidestPath,
 )
 
@@ -41,7 +41,7 @@ def network() -> PyDiGraph:
         pytest.param(
             0,
             0,
-            LowestCost(),
+            WeakestPath(),
             [0],
             0.0,
             id="Same start and end (shortest distance)",
@@ -49,9 +49,9 @@ def network() -> PyDiGraph:
         pytest.param(
             5,
             0,
-            LowestCost(),
+            WeakestPath(),
             None,
-            LowestCost._regular_node_unreached_cost(),
+            WeakestPath._regular_node_unreached_cost(),
             id="You shall not path",
         ),
         pytest.param(
@@ -65,10 +65,10 @@ def network() -> PyDiGraph:
         pytest.param(
             0,
             1,
-            LowestCost(),
+            WeakestPath(),
             [0, 1],
             1.0,
-            id="Direct connection 0 -> 1 (lowest cost)",
+            id="Direct connection 0 -> 1 (weakest path)",
         ),
         pytest.param(
             0,
@@ -81,10 +81,10 @@ def network() -> PyDiGraph:
         pytest.param(
             6,
             5,
-            LowestCost(),
+            WeakestPath(),
             [6, 2, 5],
             3.0,
-            id="6 -> 5, multiple viable paths (lowest cost)",
+            id="6 -> 5, multiple viable paths (weakest path)",
         ),
         pytest.param(
             6,
@@ -97,7 +97,7 @@ def network() -> PyDiGraph:
         pytest.param(
             1,
             4,
-            LowestCost(),
+            WeakestPath(),
             [1, 2, 5, 6, 4],
             5.0,
             id="1 -> 4, 2-step worse than 4-step",
@@ -154,10 +154,10 @@ def simple_network() -> PyDiGraph:
     ("strategy", "expected_path", "expected_cost"),
     [
         pytest.param(
-            LowestCost(),
+            WeakestPath(),
             [0, 3, 2],
             3.0,
-            id="lowest cost",
+            id="weakest path",
         ),
         pytest.param(
             WidestPath(),
@@ -191,9 +191,9 @@ def test_dijkstra_strategies_0_to_2(
     ("strategy", "expected_cost"),
     [
         pytest.param(
-            LowestCost(),
+            WeakestPath(),
             0.0,
-            id="lowest cost: zero cost",
+            id="weakest path: zero cost",
         ),
         pytest.param(
             WidestPath(),
@@ -226,9 +226,9 @@ def test_dijkstra_strategies_same_source_and_target(
     ("strategy", "expected_cost"),
     [
         pytest.param(
-            LowestCost(),
+            WeakestPath(),
             float("inf"),
-            id="lowest cost: zero cost",
+            id="weakest path: zero cost",
         ),
         pytest.param(
             WidestPath(),
@@ -274,7 +274,7 @@ def test_dijkstra_strategies_unreachable_target(
             "'wide' cycle",
         ),
         pytest.param(
-            LowestCost(),
+            WeakestPath(),
             [
                 (0, 1, 1.0),
                 (1, 2, 1.0),
