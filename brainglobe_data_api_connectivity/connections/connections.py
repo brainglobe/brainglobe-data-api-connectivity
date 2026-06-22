@@ -1,10 +1,12 @@
 from pathlib import Path
-from typing import Container, Hashable
+from typing import Any, Callable, Container, Hashable, Iterable
 
 import polars as pl
 from rustworkx import PyDiGraph
 
 from .._types import EdgeTable
+from .node_contractions import sum_of_weights
+from .query_opts import ConnectionsLookup, NodeIs
 
 
 class Connections:
@@ -23,6 +25,7 @@ class Connections:
 
     network: PyDiGraph
     nodes: pl.DataFrame
+    collapsed_node_indexes: set[int]
 
     @classmethod
     def from_files(
@@ -114,6 +117,8 @@ class Connections:
                     row index of a node in `nodes` is being used as the
                     identifier.
         """
+        self.collapsed_node_indexes = set()
+
         index_translations = self._setup_network(
             node_info, edge_table, existing_node_indexing=node_index_column
         )
@@ -260,6 +265,79 @@ class Connections:
             self.edge_info_from_col = None
             self.edge_info_to_col = None
 
+    def contract_nodes(
+        self,
+        nodes: Iterable[int],
+        weight_contraction_fn: Callable[..., float] = sum_of_weights,
+        super_node_info: dict[str, Any] | None = None,
+    ) -> int:
+        r"""Collapse nodes into a single node.
+
+        This operation is done **in-place**, modifying the `.network`. Indices
+        passed in `nodes` will no longer be present in the `.network`, and
+        a new node that represents the "super"-node will be added. The
+        index of this node is returned by the method.
+
+        Note that any metadata pertaining to the contracted nodes, and the
+        resulting region, is preserved. The nodes that are "contracted" will
+        have their internal indexes added to `collapsed_node_indexes`, to
+        reflect the fact that they are no longer represented in the network.
+        The super-node will be added to the `.nodes` table.
+
+        Collapsing several nodes into a single node removes any edges between
+        pairs of said nodes.
+
+        If multiple nodes in `nodes` $v_i$ (for some index set
+        $i\in\mathcal{I}$) have a connection to some other node $v_j$ that is
+        not in `nodes`, then a decision must be made regarding the weight of
+        the resulting connection between the super-node and $v_j$. This is
+        based on the weights of the edges $(v_i, v_j)$ (reverse direction is
+        treated separately but identically), which are passed as arguments to
+        the `weight_contraction_fn` and should return the resulting weight that
+        will be applied to the edge from the super-node to $v_j$. Common
+        contraction options are available in the `.node_contractions` module.
+
+        Args:
+            nodes: Container[int]
+                Internal node indexes that are to be contracted.
+            weight_contraction_fn: Callable[..., float]
+                Function that dictates behaviour for combining edge weights
+                when nodes are contracted (see above). Default is to sum edge
+                weights.
+            super_node_info: dict[str, Any] | None
+                Information about the resulting super-node, created by the
+                contraction process. Keys in this dictionary should match
+                column headers in `.nodes`.
+
+        Returns:
+            super_node_index:
+                Internal index of the super-node within the `.network`.
+        """
+        # Perform collapse, delegating to rustworkx and recording collapsed
+        # node indexes.
+        super_node_data = "Collapse of " + ", ".join(str(i) for i in nodes)
+        super_node_index = self.network.contract_nodes(
+            nodes, super_node_data, weight_combo_fn=weight_contraction_fn
+        )
+        self.collapsed_node_indexes = self.collapsed_node_indexes.union(nodes)
+
+        # Add the super-node to `.nodes`. Populate it with any information
+        # provided about the new node, if applicable. Note that information
+        # provided that is not an existing column header is ignored.
+        if super_node_info is None:
+            super_node_info = {}
+        super_node_info = {
+            key: super_node_info.get(key) for key in self.nodes.columns
+        }
+        super_node_info[self._node_internal_index_col] = super_node_index
+        # NOTE: Should consider .vstack() here too, depending on how many times
+        # we expect to contract on a single graph.
+        self.nodes.extend(pl.DataFrame(super_node_info))
+
+        # Handling anything hierarchical should then be done here.
+
+        return super_node_index
+
     def node_indexes_from_information(
         self, *predicates, **constraints
     ) -> pl.Series:
@@ -321,3 +399,87 @@ class Connections:
         return self.nodes.filter(
             pl.col(self._node_internal_index_col).is_in(node_indexes)
         )
+
+    def direct_connections(
+        self,
+        node: int,
+        node_as: NodeIs = NodeIs.ANY,
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+    ) -> tuple[list[int], list[int]]:
+        """
+        Report direct connections of a `node`.
+
+        When reporting connections, one can choose to use either the `.network`
+        or `.edge_info` as the source from which to find connections. This
+        choice is handled by the `connections_lookup` option, and should be
+        specified using the `ConnectionsLookup` enum.
+
+        By default the method will return all direct connections that the
+        `node` possesses, split into two lists by whether `node` is the
+        input (source) or output (target) in the direct connection. If only one
+        of these lists is desired, the `node_as` argument can be passed to
+        specify which, and the method will not bother searching for the other.
+        Use the `NodeIs` enum to specify.
+
+        Args:
+            node: int
+                Index of a node in the network to fetch direct connections of.
+            node_as: NodeIs
+                The role in the connection that `node` should play, in order to
+                be returned.
+            connections_lookup: ConnectionsLookup
+                The source to use when searching for the `node`s connections.
+
+        Returns:
+            connections_as_input:
+                List of node indexes to which `node` connects as an input node.
+                That is, for each `i` in this list, the edge `(node, i)`
+                exists. Will be empty if only output nodes are requested.
+            connections_as_output:
+                List of node indexes to which `node` connects as an output
+                node. That is, for each `i` in this list, the edge `(i, node)`
+                exists. Will be empty if only input nodes are requested.
+
+        Raises:
+            TypeError:
+                When attempting to search `.edge_info` for connection reports,
+                but the attribute has not been set.
+        """
+        connections_as_input = []
+        connections_as_output = []
+
+        if connections_lookup == ConnectionsLookup.REPORTED:
+            if node_as != NodeIs.OUTPUT:
+                connections_as_input = [
+                    i for i in self.network.successor_indices(node)
+                ]
+            if node_as != NodeIs.INPUT:
+                connections_as_output = [
+                    i for i in self.network.predecessor_indices(node)
+                ]
+        else:
+            if self.edge_info is None:
+                raise TypeError(
+                    "Edge information is not assigned "
+                    "(`self.edge_info` is `None`)"
+                )
+            if node_as != NodeIs.OUTPUT:
+                connections_as_input = (
+                    self.edge_info.filter(
+                        pl.col(self.edge_info_from_col) == node
+                    )
+                    .get_column(self.edge_info_to_col)
+                    .unique()
+                    .to_list()
+                )
+            if node_as != NodeIs.INPUT:
+                connections_as_output = (
+                    self.edge_info.filter(
+                        pl.col(self.edge_info_to_col) == node
+                    )
+                    .get_column(self.edge_info_from_col)
+                    .unique()
+                    .to_list()
+                )
+
+        return connections_as_input, connections_as_output
