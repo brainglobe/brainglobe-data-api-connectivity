@@ -50,7 +50,7 @@ def dijkstra(
     The search begins at `source` and updates the best known cost to each
     node that is connected according to a given `strategy`. The strategy
     controls how edge weights are combined into and how costs are compared
-    (e.g. optimising for the shortest‑path or widest‑path).
+    (e.g. optimising for the widest‑path).
 
     If the `target` cannot be reached, the function returns
     `(None, unreached_cost)`, where `unreached_cost` is either `0` or `inf`
