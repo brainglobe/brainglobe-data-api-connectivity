@@ -14,10 +14,14 @@ from brainglobe_data_api_connectivity.dijkstra.strategy import (
 def simple_network() -> PyDiGraph:
     """Creates a simple network on which we can test Dijkstra's algorithm.
 
-    The network includes the following routes from node 0 to node 2:
-        - (0) ── 4.0 ──► (2)
-        - (0) ── 5.0 ──► (1) ── 5.0 ──► (2)
-        - (0) ── 1.0 ──► (3) ── 2.0 ──► (2)
+    Representation of the simple network with nodes (0), (1), (2), and (3)::
+    (3) ◀── 2.0 ── (0) ── 5.0 ──▶ (1)
+                    │               │
+                   4.0              │
+                    │               │
+                    ▼               │
+                    (2) ◀───────── 5.0
+
     """
     G = PyDiGraph()
     G.add_nodes_from(range(4))
