@@ -65,10 +65,10 @@ def test_dijkstra_strategies_0_to_2(
     strategy: DijkstraStrategy,
     expected_path: list[int],
     expected_cost: float,
+    source: int = 0,
+    target: int = 2,
 ):
     """Test returned path and cost when source is 0 and target is 2."""
-    source = 0
-    target = 2
     path, cost = dijkstra(simple_network, source, target, strategy)
     assert path == expected_path
     assert cost == expected_cost
@@ -98,10 +98,9 @@ def test_dijkstra_strategies_same_source_and_target(
     simple_network: PyDiGraph,
     strategy: DijkstraStrategy,
     expected_cost: float,
+    node: int = 1,
 ):
     """Test returned path and cost when source equals target."""
-
-    node = 1
     path, cost = dijkstra(simple_network, node, node, strategy)
 
     assert path == [node]
@@ -133,11 +132,11 @@ def test_dijkstra_strategies_unreachable_target(
     simple_network: PyDiGraph,
     strategy: DijkstraStrategy,
     expected_cost: float,
+    source: int = 2,
+    target: int = 0,
 ):
     """Test returned path and cost when source equals target."""
 
-    source = 2
-    target = 0
     path, cost = dijkstra(simple_network, source, target, strategy)
 
     assert path is None
@@ -179,7 +178,8 @@ def test_dijkstra_cycle_handling(
     edges: list[tuple[int, int, float]],
     expected_path: list[int],
     expected_cost: float,
-    id: str,
+    source: int = 0,
+    target: int = 3,
 ):
     """Test that cycles do not affect path and cost.
 
@@ -193,6 +193,6 @@ def test_dijkstra_cycle_handling(
     network.add_nodes_from(range(4))
     network.add_edges_from(edges)
 
-    path, cost = dijkstra(network, 0, 3, strategy)
+    path, cost = dijkstra(network, source, target, strategy)
     assert path == expected_path
     assert cost == expected_cost
