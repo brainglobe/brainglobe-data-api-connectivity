@@ -73,12 +73,14 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
 @pytest.mark.parametrize(
     ("selection_dict", "expected"),
     [
-        ({"name": "A"}, [0]),
-        ({"name": "B"}, [1]),
-        ({"name": "C"}, [2]),
-        ({"custom_index": 1}, [0]),
-        ({"group": "AB"}, [0, 1]),
-        ({"name": "A", "group": "AB"}, [0]),
+        pytest.param({"name": "A"}, [0], id="index A"),
+        pytest.param({"name": "B"}, [1], id="index B"),
+        pytest.param({"name": "C"}, [2], id="index C"),
+        pytest.param({"custom_index": 1}, [0], id="custom index 1"),
+        pytest.param({"group": "AB"}, [0, 1], id="multiple indices"),
+        pytest.param(
+            {"name": "A", "group": "AB"}, [0], id="multiple selections"
+        ),
     ],
 )
 def test_find_node_indices(mini_G, selection_dict, expected):
