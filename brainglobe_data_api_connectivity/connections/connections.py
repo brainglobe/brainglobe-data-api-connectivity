@@ -378,6 +378,28 @@ class Connections:
             self._node_internal_index_col
         )
 
+    def find_node_indices(
+        self, selection_dict: dict, unique=False
+    ) -> int | list[int]:
+        matches = self.nodes.filter(
+            pl.all_horizontal(
+                [pl.col(k) == v for k, v in selection_dict.items()]
+            )
+        )
+        indices = matches[self._node_internal_index_col].to_list()
+
+        if len(indices) == 0:
+            raise KeyError(f"No node matches: {selection_dict}")
+
+        if unique:
+            if len(indices) > 1:
+                raise ValueError(
+                    f"Multiple nodes match (unique=True): {selection_dict}"
+                )
+            return indices[0]
+
+        return indices
+
     def node_information_from_index(
         self, node_indexes: Container[int]
     ) -> pl.DataFrame:
