@@ -378,63 +378,6 @@ class Connections:
             self._node_internal_index_col
         )
 
-    def find_node_indices(
-        self, selection_dict: dict, unique=False
-    ) -> int | list[int]:
-        matches = self.nodes.filter(
-            pl.all_horizontal(
-                [pl.col(k) == v for k, v in selection_dict.items()]
-            )
-        )
-        indices = matches[self._node_internal_index_col].to_list()
-
-        if len(indices) == 0:
-            raise KeyError(f"No node matches: {selection_dict}")
-
-        if unique:
-            if len(indices) > 1:
-                raise ValueError(
-                    f"Multiple nodes match (unique=True): {selection_dict}"
-                )
-            return indices[0]
-
-        return indices
-
-    def node_metadata_from_indices(
-        self,
-        node_indexes: int | Iterable[int],
-        column: str | None = None,
-    ) -> pl.DataFrame | Any | list[Any]:
-        """Return metadata for nodes with the given internal indexes."""
-
-        if isinstance(node_indexes, int):
-            node_indexes = [node_indexes]
-        else:
-            node_indexes = list(node_indexes)
-
-        pl_df = self.nodes.filter(
-            pl.col(self._node_internal_index_col).is_in(node_indexes)
-        )
-
-        if pl_df.height != len(node_indexes):
-            missing = set(node_indexes) - set(
-                pl_df[self._node_internal_index_col].to_list()
-            )
-            raise KeyError(f"Unknown node index(es): {missing}")
-
-        if column is not None:
-            if column not in pl_df.columns:
-                raise KeyError(
-                    f"Column '{column}' not found in node metadata."
-                )
-            pl_series = pl_df.get_column(column)
-
-            if pl_series.len() == 1:
-                return pl_series.item()
-            return pl_series.to_list()
-
-        return pl_df
-
     def node_information_from_index(
         self, node_indexes: Container[int]
     ) -> pl.DataFrame:
