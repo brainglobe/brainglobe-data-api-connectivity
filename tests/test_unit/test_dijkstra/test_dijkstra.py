@@ -157,7 +157,7 @@ def test_dijkstra_strategies_unreachable_target(
             ],
             [0, 1, 2, 3],
             1.0,
-            id = "'wide' cycle",
+            id="'wide' cycle",
         ),
         pytest.param(
             WeakestTotalWeight(),
@@ -169,7 +169,7 @@ def test_dijkstra_strategies_unreachable_target(
             ],
             [0, 1, 2, 3],
             1002.0,
-            id = "'weak weight' cycle",
+            id="'weak weight' cycle",
         ),
     ],
 )
