@@ -2,6 +2,7 @@ import polars as pl
 import pytest
 
 from brainglobe_data_api_connectivity.connections import Connections
+from brainglobe_data_api_connectivity.connections.query_opts import NodeIs
 
 
 @pytest.fixture
@@ -70,3 +71,53 @@ def edge_info() -> pl.DataFrame:
 def mini_G(nodes, edge_list, edge_info) -> Connections:
     """"""
     return Connections(nodes, edge_list, edge_info)
+
+
+@pytest.mark.parametrize(
+    ["node0", "node1", "node0_as", "expected_bool", "expected_shape"],
+    [
+        pytest.param(
+            {"name": "A"},
+            {"name": "B"},
+            None,
+            True,
+            (1, 7),
+            id="A to B",
+        ),
+        pytest.param(
+            {"name": "A"},
+            {"name": "C"},
+            None,
+            True,
+            (2, 7),
+            id="A to C",
+        ),
+        pytest.param(
+            {"name": "B"},
+            {"name": "A"},
+            None,
+            True,
+            (1, 7),
+            id="B to A",
+        ),
+        pytest.param(
+            {"name": "B"},
+            {"name": "A"},
+            NodeIs.INPUT,
+            False,
+            (0, 7),
+            id="B to A input only",
+        ),
+    ],
+)
+def test_has_direct_connection_between(
+    mini_G, node0, node1, node0_as, expected_bool, expected_shape
+):
+    has_connection, connections = mini_G.direct_connection_between(
+        node0,
+        node1,
+        node0_as=node0_as,
+    )
+
+    assert has_connection == expected_bool
+    assert connections.shape == expected_shape

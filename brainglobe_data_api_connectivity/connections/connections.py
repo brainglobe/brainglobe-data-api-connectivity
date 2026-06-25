@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Callable, Container, Hashable, Iterable
+from typing import Any, Callable, Container, Hashable, Iterable, Tuple
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -483,3 +483,60 @@ class Connections:
                 )
 
         return connections_as_input, connections_as_output
+
+    def direct_connection_between(
+        self,
+        node0_node_id: dict[str, str],
+        node1_node_id: dict[str, str],
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+        node0_as: NodeIs = NodeIs.ANY,
+    ) -> Tuple[bool, pl.DataFrame]:
+        """"""
+
+        idx_node0 = self.node_indexes_from_information(
+            **node0_node_id
+        ).to_list()
+        idx_node1 = self.node_indexes_from_information(
+            **node1_node_id
+        ).to_list()
+
+        if len(idx_node0) != 1 or len(idx_node1) != 1:
+            raise ValueError(
+                f"Expected exactly 1 unique node for each input, "
+                f"but got {len(idx_node0)} for node0 ({node0_node_id}) "
+                f"and {len(idx_node1)} for node1 ({node1_node_id})."
+            )
+
+        node0_idx = idx_node0[0]
+        node1_idx = idx_node1[0]
+
+        connections_in, connections_out = self.direct_connections(
+            node0_idx,
+            node_as=node0_as,
+            connections_lookup=connections_lookup,
+        )
+
+        # If no connection exists, return empty DataFrame
+        if (
+            node1_idx not in connections_in
+            and node1_idx not in connections_out
+        ):
+            if self.edge_info is None:
+                return False, pl.DataFrame()
+            return False, self.edge_info.head(0)
+
+        # At this point, edge_info must exist
+        assert self.edge_info is not None
+
+        from_col = pl.col(self.edge_info_from_col)
+        to_col = pl.col(self.edge_info_to_col)
+
+        node0_value = next(iter(node0_node_id.values()))
+        node1_value = next(iter(node1_node_id.values()))
+
+        df = self.edge_info.filter(
+            ((from_col == node0_value) & (to_col == node1_value))
+            | ((from_col == node1_value) & (to_col == node0_value))
+        )
+
+        return True, df
