@@ -261,27 +261,26 @@ def test_connections_setup_edge_metadata(
         assert G.edge_info_from_col == from_column
         assert G.edge_info_to_col == to_column
 
-        assert G.edge_info.shape == edge_info.shape
-        preserved_columns = set(
-            c for c in edge_info.columns if c not in [from_column, to_column]
-        )
+        assert G.edge_info.shape[0] == edge_info.shape[0]
+        # Should insert the internal indexing columns
+        assert G.edge_info.shape[1] == edge_info.shape[1] + 2
 
         # Confirm metadata has been updated to respect any index translations
         for row in edge_info.iter_rows(named=True):
             if index_translations is not None:
-                new_from = index_translations[row[from_column]]
-                new_to = index_translations[row[to_column]]
+                idx_from = index_translations[row[from_column]]
+                idx_to = index_translations[row[to_column]]
             else:
-                new_from = row[from_column]
-                new_to = row[to_column]
+                idx_from = row[G.edge_info_from_col]
+                idx_to = row[G.edge_info_to_col]
 
             unique_matching_row = G.edge_info.row(
-                by_predicate=(pl.col(G.edge_info_from_col) == new_from)
-                & (pl.col(G.edge_info_to_col) == new_to),
+                by_predicate=(pl.col(G._edge_info_from_index_col) == idx_from)
+                & (pl.col(G._edge_info_to_index_col) == idx_to),
                 named=True,
             )
 
-            for col in preserved_columns:
+            for col in edge_info.columns:
                 assert row[col] == unique_matching_row[col]
 
 

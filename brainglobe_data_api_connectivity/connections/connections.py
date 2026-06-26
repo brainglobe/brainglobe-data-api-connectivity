@@ -18,8 +18,8 @@ class Connections:
     """
 
     _node_internal_index_col: str = "__node_index"
-    _edge_info_index_from_col: str = "__idx_from"
-    _edge_info_index_to_col: str = "__idx_to"
+    _edge_info_from_index_col: str = "__idx_from"
+    _edge_info_to_index_col: str = "__idx_to"
 
     _user_node_index_col: str | None = None
 
@@ -254,6 +254,16 @@ class Connections:
                     "Connection metadata 'from' and 'to' columns are the same "
                     f"({from_column})."
                 )
+            for reserved_header in [
+                self._edge_info_from_index_col,
+                self._edge_info_to_index_col,
+            ]:
+                if reserved_header in edge_info.columns:
+                    raise ValueError(
+                        f"Heading '{reserved_header}' must not be "
+                        "present in the edge metadata, as it is reserved "
+                        "for internal index referencing."
+                    )
 
             self.edge_info_from_col = from_column
             self.edge_info_to_col = to_column
@@ -264,13 +274,20 @@ class Connections:
                 self.edge_info = edge_info.with_columns(
                     pl.col(self.edge_info_from_col)
                     .replace(index_translations)
-                    .alias(self.edge_info_from_col),
+                    .alias(self._edge_info_from_index_col),
                     pl.col(self.edge_info_to_col)
                     .replace(index_translations)
-                    .alias(self.edge_info_to_col),
+                    .alias(self._edge_info_to_index_col),
                 )
             else:
-                self.edge_info = edge_info
+                self.edge_info = edge_info.with_columns(
+                    pl.col(self.edge_info_from_col).alias(
+                        self._edge_info_from_index_col
+                    ),
+                    pl.col(self.edge_info_to_col).alias(
+                        self._edge_info_to_index_col
+                    ),
+                )
         else:
             self.edge_info = None
             self.edge_info_from_col = None
