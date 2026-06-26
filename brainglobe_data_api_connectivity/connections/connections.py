@@ -431,12 +431,12 @@ class Connections:
 
     def direct_connections(
         self,
-        node: int,
+        node_internal_index: int,
         node_as: NodeIs = NodeIs.ANY,
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
     ) -> tuple[list[int], list[int]]:
         """
-        Report direct connections of a `node`.
+        Report direct connections of a node.
 
         When reporting connections, one can choose to use either the `.network`
         or `.edge_info` as the source from which to find connections. This
@@ -444,11 +444,11 @@ class Connections:
         specified using the `ConnectionsLookup` enum.
 
         By default the method will return all direct connections that the
-        `node` possesses, split into two lists by whether `node` is the
-        input (source) or output (target) in the direct connection. If only one
-        of these lists is desired, the `node_as` argument can be passed to
-        specify which, and the method will not bother searching for the other.
-        Use the `NodeIs` enum to specify.
+        node with internal index `node_internal_index` possesses, split into
+        two lists by whether this node is the input (source) or output (target)
+        in the direct connection. If only one of these lists is desired, the
+        `node_as` argument can be passed to specify which, and the method will
+        not bother searching for the other. Use the `NodeIs` enum to specify.
 
         Args:
             node: int
@@ -480,11 +480,17 @@ class Connections:
         if connections_lookup == ConnectionsLookup.REPORTED:
             if node_as != NodeIs.OUTPUT:
                 connections_as_input = [
-                    i for i in self.network.successor_indices(node)
+                    i
+                    for i in self.network.successor_indices(
+                        node_internal_index
+                    )
                 ]
             if node_as != NodeIs.INPUT:
                 connections_as_output = [
-                    i for i in self.network.predecessor_indices(node)
+                    i
+                    for i in self.network.predecessor_indices(
+                        node_internal_index
+                    )
                 ]
         else:
             if self.edge_info is None:
@@ -495,18 +501,20 @@ class Connections:
             if node_as != NodeIs.OUTPUT:
                 connections_as_input = (
                     self.edge_info.filter(
-                        pl.col(self.edge_info_from_col) == node
+                        pl.col(self._edge_info_from_index_col)
+                        == node_internal_index
                     )
-                    .get_column(self.edge_info_to_col)
+                    .get_column(self._edge_info_to_index_col)
                     .unique()
                     .to_list()
                 )
             if node_as != NodeIs.INPUT:
                 connections_as_output = (
                     self.edge_info.filter(
-                        pl.col(self.edge_info_to_col) == node
+                        pl.col(self._edge_info_to_index_col)
+                        == node_internal_index
                     )
-                    .get_column(self.edge_info_from_col)
+                    .get_column(self._edge_info_from_index_col)
                     .unique()
                     .to_list()
                 )
