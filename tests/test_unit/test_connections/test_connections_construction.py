@@ -126,14 +126,14 @@ def test_connections_setup_network(
         # added using their row-indexes as their internal indexes.
         # Edge table did not need to be adapted.
         assert index_translations is None
-        assert G.node_index_col is None
+        assert G.node_index_column is None
 
         for from_node, to_node, weight in edge_table:
             assert (from_node, to_node) in constructed_edge_list
             assert G.network.get_edge_data(from_node, to_node) == weight
     else:
         # Index translation was necessary. Confirm this was done correctly.
-        assert G.node_index_col == existing_node_indexing
+        assert G.node_index_column == existing_node_indexing
         assert index_translations is not None
         assert index_translations == expected_node_indexing
 

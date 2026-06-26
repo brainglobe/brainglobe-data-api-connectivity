@@ -32,7 +32,7 @@ class Connections:
     collapsed_node_indexes: set[int]
 
     @property
-    def node_index_col(self) -> str | None:
+    def node_index_column(self) -> str | None:
         """Return the column in `self.node_info` or unique identifiers.
 
         If the user provided a `node_index_column` at creation, the name of
