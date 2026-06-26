@@ -17,7 +17,11 @@ class Connections:
     ergo, we shall have an attribute instead.
     """
 
-    _node_internal_index_col: str = "node_index"
+    _node_internal_index_col: str = "__node_index"
+    _edge_info_index_from_col: str = "__idx_from"
+    _edge_info_index_to_col: str = "__idx_to"
+
+    _user_node_index_col: str | None = None
 
     edge_info: pl.DataFrame | None
     edge_info_from_col: str | None
@@ -26,6 +30,18 @@ class Connections:
     network: PyDiGraph
     nodes: pl.DataFrame
     collapsed_node_indexes: set[int]
+
+    @property
+    def node_index_col(self) -> str | None:
+        """Return the column in `self.node_info` or unique identifiers.
+
+        If the user provided a `node_index_column` at creation, the name of
+        this column is returned. Otherwise, the instance will have assigned
+        internal indexes assuming the indexing of the rows in `node_info` was
+        being used as the reference value in the `edge_table` and `edge_info`,
+        in which case `None` is returned.
+        """
+        return self._user_node_index_col
 
     @classmethod
     def from_files(
@@ -154,23 +170,18 @@ class Connections:
                 "present in the node metadata, as it is reserved "
                 "for internal index referencing."
             )
+        self._user_node_index_col = existing_node_indexing
 
         n_nodes = len(nodes)
 
-        if self._node_internal_index_col in nodes:
-            raise ValueError(
-                f"Heading '{self._node_internal_index_col}' must not be "
-                "present in the node metadata, as it is reserved "
-                "for internal index referencing."
-            )
-        if existing_node_indexing is not None:
-            if existing_node_indexing not in nodes:
+        if self._user_node_index_col is not None:
+            if self._user_node_index_col not in nodes:
                 raise ValueError(
-                    f"Heading {existing_node_indexing} "
+                    f"Heading {self._user_node_index_col} "
                     "not present in node metadata."
                 )
             n_unique_entries = len(
-                nodes.get_column(existing_node_indexing).unique()
+                nodes.get_column(self._user_node_index_col).unique()
             )
             if n_unique_entries != n_nodes:
                 raise ValueError(
@@ -197,7 +208,7 @@ class Connections:
             }
         )
 
-        if existing_node_indexing is None:
+        if self._user_node_index_col is None:
             self.network.add_edges_from(edge_table)
             index_translations = None
         else:
@@ -206,7 +217,7 @@ class Connections:
             # their references in the edge table (and edge metadata either).
             # Adapt as appropriate.
             index_translations = {
-                row_dict[existing_node_indexing]: row_dict[
+                row_dict[self._user_node_index_col]: row_dict[
                     self._node_internal_index_col
                 ]
                 for row_dict in self.nodes.iter_rows(named=True)
