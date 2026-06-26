@@ -162,7 +162,8 @@ class Connections:
         where table index `i` contains any information about the node with
         (internal) index `i` in the underlying network object.
 
-        At the end of this method, `self.network` and `self.nodes` are set.
+        At the end of this method, `self.network`, `self.nodes`, and
+        `self._user_node_index_col` are set.
         """
         if self._node_internal_index_col in nodes:
             raise ValueError(
