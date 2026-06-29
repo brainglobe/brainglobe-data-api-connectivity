@@ -17,7 +17,11 @@ class Connections:
     ergo, we shall have an attribute instead.
     """
 
-    _node_internal_index_col: str = "node_index"
+    _node_internal_index_col: str = "__node_index"
+    _edge_info_from_index_col: str = "__idx_from"
+    _edge_info_to_index_col: str = "__idx_to"
+
+    _user_node_index_col: str | None = None
 
     edge_info: pl.DataFrame | None
     edge_info_from_col: str | None
@@ -26,6 +30,18 @@ class Connections:
     network: PyDiGraph
     nodes: pl.DataFrame
     collapsed_node_indexes: set[int]
+
+    @property
+    def node_index_column(self) -> str | None:
+        """Return the column in `self.node_info` or unique identifiers.
+
+        If the user provided a `node_index_column` at creation, the name of
+        this column is returned. Otherwise, the instance will have assigned
+        internal indexes assuming the indexing of the rows in `node_info` was
+        being used as the reference value in the `edge_table` and `edge_info`,
+        in which case `None` is returned.
+        """
+        return self._user_node_index_col
 
     @classmethod
     def from_files(
@@ -146,7 +162,8 @@ class Connections:
         where table index `i` contains any information about the node with
         (internal) index `i` in the underlying network object.
 
-        At the end of this method, `self.network` and `self.nodes` are set.
+        At the end of this method, `self.network`, `self.nodes`, and
+        `self._user_node_index_col` are set.
         """
         if self._node_internal_index_col in nodes:
             raise ValueError(
@@ -154,23 +171,18 @@ class Connections:
                 "present in the node metadata, as it is reserved "
                 "for internal index referencing."
             )
+        self._user_node_index_col = existing_node_indexing
 
         n_nodes = len(nodes)
 
-        if self._node_internal_index_col in nodes:
-            raise ValueError(
-                f"Heading '{self._node_internal_index_col}' must not be "
-                "present in the node metadata, as it is reserved "
-                "for internal index referencing."
-            )
-        if existing_node_indexing is not None:
-            if existing_node_indexing not in nodes:
+        if self._user_node_index_col is not None:
+            if self._user_node_index_col not in nodes:
                 raise ValueError(
-                    f"Heading {existing_node_indexing} "
+                    f"Heading {self._user_node_index_col} "
                     "not present in node metadata."
                 )
             n_unique_entries = len(
-                nodes.get_column(existing_node_indexing).unique()
+                nodes.get_column(self._user_node_index_col).unique()
             )
             if n_unique_entries != n_nodes:
                 raise ValueError(
@@ -197,7 +209,7 @@ class Connections:
             }
         )
 
-        if existing_node_indexing is None:
+        if self._user_node_index_col is None:
             self.network.add_edges_from(edge_table)
             index_translations = None
         else:
@@ -206,7 +218,7 @@ class Connections:
             # their references in the edge table (and edge metadata either).
             # Adapt as appropriate.
             index_translations = {
-                row_dict[existing_node_indexing]: row_dict[
+                row_dict[self._user_node_index_col]: row_dict[
                     self._node_internal_index_col
                 ]
                 for row_dict in self.nodes.iter_rows(named=True)
@@ -243,6 +255,16 @@ class Connections:
                     "Connection metadata 'from' and 'to' columns are the same "
                     f"({from_column})."
                 )
+            for reserved_header in [
+                self._edge_info_from_index_col,
+                self._edge_info_to_index_col,
+            ]:
+                if reserved_header in edge_info.columns:
+                    raise ValueError(
+                        f"Heading '{reserved_header}' must not be "
+                        "present in the edge metadata, as it is reserved "
+                        "for internal index referencing."
+                    )
 
             self.edge_info_from_col = from_column
             self.edge_info_to_col = to_column
@@ -253,13 +275,20 @@ class Connections:
                 self.edge_info = edge_info.with_columns(
                     pl.col(self.edge_info_from_col)
                     .replace(index_translations)
-                    .alias(self.edge_info_from_col),
+                    .alias(self._edge_info_from_index_col),
                     pl.col(self.edge_info_to_col)
                     .replace(index_translations)
-                    .alias(self.edge_info_to_col),
+                    .alias(self._edge_info_to_index_col),
                 )
             else:
-                self.edge_info = edge_info
+                self.edge_info = edge_info.with_columns(
+                    pl.col(self.edge_info_from_col).alias(
+                        self._edge_info_from_index_col
+                    ),
+                    pl.col(self.edge_info_to_col).alias(
+                        self._edge_info_to_index_col
+                    ),
+                )
         else:
             self.edge_info = None
             self.edge_info_from_col = None
@@ -402,12 +431,12 @@ class Connections:
 
     def direct_connections(
         self,
-        node: int,
+        node_internal_index: int,
         node_as: NodeIs = NodeIs.ANY,
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
     ) -> tuple[list[int], list[int]]:
         """
-        Report direct connections of a `node`.
+        Report direct connections of a node.
 
         When reporting connections, one can choose to use either the `.network`
         or `.edge_info` as the source from which to find connections. This
@@ -415,11 +444,11 @@ class Connections:
         specified using the `ConnectionsLookup` enum.
 
         By default the method will return all direct connections that the
-        `node` possesses, split into two lists by whether `node` is the
-        input (source) or output (target) in the direct connection. If only one
-        of these lists is desired, the `node_as` argument can be passed to
-        specify which, and the method will not bother searching for the other.
-        Use the `NodeIs` enum to specify.
+        node with internal index `node_internal_index` possesses, split into
+        two lists by whether this node is the input (source) or output (target)
+        in the direct connection. If only one of these lists is desired, the
+        `node_as` argument can be passed to specify which, and the method will
+        not bother searching for the other. Use the `NodeIs` enum to specify.
 
         Args:
             node: int
@@ -451,11 +480,17 @@ class Connections:
         if connections_lookup == ConnectionsLookup.REPORTED:
             if node_as != NodeIs.OUTPUT:
                 connections_as_input = [
-                    i for i in self.network.successor_indices(node)
+                    i
+                    for i in self.network.successor_indices(
+                        node_internal_index
+                    )
                 ]
             if node_as != NodeIs.INPUT:
                 connections_as_output = [
-                    i for i in self.network.predecessor_indices(node)
+                    i
+                    for i in self.network.predecessor_indices(
+                        node_internal_index
+                    )
                 ]
         else:
             if self.edge_info is None:
@@ -466,18 +501,20 @@ class Connections:
             if node_as != NodeIs.OUTPUT:
                 connections_as_input = (
                     self.edge_info.filter(
-                        pl.col(self.edge_info_from_col) == node
+                        pl.col(self._edge_info_from_index_col)
+                        == node_internal_index
                     )
-                    .get_column(self.edge_info_to_col)
+                    .get_column(self._edge_info_to_index_col)
                     .unique()
                     .to_list()
                 )
             if node_as != NodeIs.INPUT:
                 connections_as_output = (
                     self.edge_info.filter(
-                        pl.col(self.edge_info_to_col) == node
+                        pl.col(self._edge_info_to_index_col)
+                        == node_internal_index
                     )
-                    .get_column(self.edge_info_from_col)
+                    .get_column(self._edge_info_from_index_col)
                     .unique()
                     .to_list()
                 )
