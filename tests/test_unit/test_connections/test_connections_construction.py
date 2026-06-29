@@ -88,6 +88,19 @@ def edge_metadata() -> pl.DataFrame:
             {3: 0, 2: 1, 1: 2},
             id="Reverse custom indexing",
         ),
+        pytest.param(
+            "abc_nodes",
+            [
+                ("alpha", "beta", 1),  # alpha -> beta, 1
+                ("alpha", "gamma", 2),  # alpha -> gamma, 2
+                ("beta", "alpha", -1),  # beta -> alpha, -1
+                ("beta", "gamma", 3),  # beta -> gamma, 3
+                ("gamma", "alpha", -2),  # gamma - alpha, -2
+            ],
+            "name",
+            {"alpha": 0, "beta": 1, "gamma": 2},
+            id="Index on name (str-valued) column",
+        ),
     ],
 )
 def test_connections_setup_network(
