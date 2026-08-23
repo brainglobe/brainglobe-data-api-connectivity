@@ -41,7 +41,6 @@ dev = [
   "pytest-cov",
   "pytest-mock",
   "coverage",
-  "tox",
   "mypy",
   "pre-commit",
   "ruff",
@@ -73,9 +72,8 @@ include-package-data = true
 include = ["brainglobe_data_api_connectivity*"]
 exclude = ["tests", "docs*"]
 
-
 [tool.pytest.ini_options]
-addopts = "--cov=brainglobe_data_api_connectivity"
+addopts = "--cov=brainglobe_data_api_connectivity --cov-report=xml --color=yes -vv"
 filterwarnings = [
     "error",
 ]
@@ -92,7 +90,6 @@ ignore = [
   "docs/",
   "docs/source/",
 ]
-
 
 [tool.ruff]
 line-length = 79
@@ -112,29 +109,6 @@ fix = true
 
 [tool.ruff.format]
 docstring-code-format = true # Also format code in docstrings (e.g. examples)
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist = py{311,312,313}
-isolated_build = True
-
-[gh-actions]
-python =
-    3.11: py311
-    3.12: py312
-    3.13: py313
-
-[testenv]
-passenv =
-    CI
-    GITHUB_ACTIONS
-extras =
-    dev
-commands =
-    pytest -v --color=yes --cov=brainglobe_data_api_connectivity --cov-report=xml
-"""
-
 
 [tool.codespell]
 skip = '.git'
