@@ -9,6 +9,7 @@
 import os
 import sys
 from importlib.metadata import version as get_version
+from pathlib import Path
 
 # Used when building API docs, put the dependencies
 # of any class you are documenting here
@@ -42,6 +43,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinx_gallery.gen_gallery",
     "sphinx_sitemap",
     "myst_parser",
 ]
@@ -69,6 +71,16 @@ myst_heading_anchors = 3
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
+SPHINX_GALLERY_OUTPUT_DIR = "examples/"
+
+# Sphinx gallery configuration settings
+sphinx_gallery_conf = {
+    "examples_dirs": Path(__file__).parent / "../examples/",
+    "filename_pattern": "/*.py",
+    "gallery_dirs": Path(__file__).parent / SPHINX_GALLERY_OUTPUT_DIR,
+    "run_stale_examples": True,
+}
+
 # Automatically generate stub pages for API
 autosummary_generate = True
 autodoc_default_flags = ["members", "inherited-members"]
@@ -81,6 +93,8 @@ exclude_patterns = [
     # to ensure that include files (partial pages) aren't built, exclude them
     # https://github.com/sphinx-doc/sphinx/issues/1965#issuecomment-124732907
     "**/includes/**",
+    f"{SPHINX_GALLERY_OUTPUT_DIR}/*ipynb",
+    f"{SPHINX_GALLERY_OUTPUT_DIR}/*.py",
 ]
 
 # -- Options for HTML output -------------------------------------------------
