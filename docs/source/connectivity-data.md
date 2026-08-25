@@ -1,7 +1,7 @@
 # Connectivity Data
-We can divide connectivity data into:
-- a network consisting of nodes, edges, and weights
-- the metadata (everything we know about the regions, connections, and dataset)
+We can understand brain connectivity data as:
+- A network consisting of nodes, edges, and weights
+- The metadata (everything we know about the regions, connections, and dataset)
 
 While graph analysis can be done using only the network, the metadata is essential for guiding analyses, understanding results, and making the work reproducible.
 
@@ -68,7 +68,7 @@ Connectivity metadata generally consists of the following components:
 - **Node Metadata**: Information about the brain-regions, whose connections have been explored.
   Typically they will be given some form of unique identifier, as well as names, abbreviations, any groupings of regions, and other data like their spatial coordinates.
 - **Edge Metadata**: Information about the connections.
-  This may consist of information about the studies in which they were examined, any special reference names they might have, or any user- or neurological-groupings of the connections themselves.
+  This may consist of information about the studies in which they were examined, any special reference names they might have, or any user-provided or neuroscientific groupings of the connections themselves.
 
 ### Example: Metadata
 

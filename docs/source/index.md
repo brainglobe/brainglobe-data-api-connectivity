@@ -12,7 +12,7 @@
 
 This package acts as an interface between brain connectivity data and graph‑based analyses.
 
-The purpose of the package is to provide neuroscientists with an interface for asking questions about a connectivity network without having to translate those questions into mathematical graph operations.
+The purpose of the package is to provide neuroscientists with an interface for asking questions about the connectivity of a network without having to translate those questions into mathematical graph operations.
 
 For example, the question "what is the shortest path between brain areas A and B that passes through region C?" translates to "determine the shortest path between region A and region C, and then the shortest path between region C and region B, and concatenate them", which can be handled using well-established network algorithms.
 
