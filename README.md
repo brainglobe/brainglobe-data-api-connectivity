@@ -35,3 +35,11 @@ Install the package in editable mode with the following command:
 ```sh
 pip install -e .[dev]
 ```
+
+### Install `pre-commit` hooks
+
+If you are contributing to the project, install the pre-commit hooks:
+
+```sh
+pre-commit install
+```
