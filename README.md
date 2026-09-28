@@ -24,7 +24,7 @@ We recommend installing `brainglobe-data-api-connectivity` within a [conda](http
 Instructions assume `conda` usage, but `mamba`/`micromamba` are interchangeable.
 
 ```sh
-conda env create -n data-api-connectivity python=3.13
+conda create -n data-api-connectivity python=3.13
 conda activate data-api-connectivity
 ```
 
