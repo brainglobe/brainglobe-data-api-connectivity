@@ -174,3 +174,5 @@ for matrix_id in ["CNS2f", "CNS2m"]:
         node_index_column="node_idx",
     )
     print(f"Successfully created Connections for {matrix_id}")
+    print(f"Number of nodes: {connections.network.num_nodes()}")
+    print(f"Number of edges: {connections.network.num_edges()}")
