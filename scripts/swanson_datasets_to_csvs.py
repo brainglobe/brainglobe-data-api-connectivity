@@ -13,6 +13,7 @@ from typing import TypedDict
 
 import pandas as pd
 
+from brainglobe_data_api_connectivity.connections import Connections
 from brainglobe_data_api_connectivity.io import excel, validate_input
 from brainglobe_data_api_connectivity.utils import convert, tidy
 
@@ -63,8 +64,6 @@ if __name__ == "__main__":
             + edge_info[f"connection_{region_type}_region_side"].astype(str)
         )
 
-    edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
-
     # Process each matrix sheet
     for matrix_id in ["CNS2f", "CNS2m"]:
         sheet = [
@@ -84,6 +83,8 @@ if __name__ == "__main__":
         node_info.columns = tidy.rename_columns(node_info.columns)
         region_ids = node_info["abbr"] + "_" + node_info["side"].astype(str)
         node_info["region_id"] = region_ids
+        node_info = node_info.replace("•", 0)
+        node_info.insert(0, "node_idx", range(len(node_info)))
 
         # Load and validate matrix and ids
         processed_matrix = excel.get_df_from_excel(
@@ -94,7 +95,8 @@ if __name__ == "__main__":
         validate_input.validate_adjacency_matrix(processed_matrix)
 
         edge_table_processed = convert.convert_matrix_to_edge_table(
-            processed_matrix, region_ids=region_ids
+            processed_matrix,
+            region_ids=node_info["node_idx"],
         )
 
         # Save outputs
@@ -102,12 +104,48 @@ if __name__ == "__main__":
         output_folder.mkdir(exist_ok=True)
 
         edge_table_processed.to_csv(
-            output_folder / f"{matrix_id}_edge_table.csv", index=False
+            output_folder / f"{matrix_id}_edge_table.csv",
+            index=False,
+            header=False,
         )
         node_info.to_csv(
             output_folder / f"{matrix_id}_node_info.csv", index=False
         )
 
+        # Save outputs
+        output_folder = DATA_FOLDER / matrix_id
+        output_folder.mkdir(exist_ok=True)
+
+        edge_table_processed.to_csv(
+            output_folder / f"{matrix_id}_edge_table.csv",
+            index=False,
+            header=False,
+        )
+        node_info.to_csv(
+            output_folder / f"{matrix_id}_node_info.csv", index=False
+        )
+
+        print(
+            f"Saved {matrix_id}_node_info.csv and ",
+            f"{matrix_id}_edge_table.csv in {output_folder} folder",
+        )
+
+    # Map region IDs in edge_info to node indices
+    for region in ["origin", "termination"]:
+        edge_info[f"{region}_region_idx"] = (
+            edge_info[f"{region}_region_id"]
+            .map(dict(zip(node_info["region_id"], node_info["node_idx"])))
+            .astype("Int64")
+        )
+
+    edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
+
+    print(
+        f"Saved edge_info.csv in {DATA_FOLDER} folder",
+    )
+
+    for matrix_id in ["CNS2f", "CNS2m"]:
+        output_folder = DATA_FOLDER / matrix_id
         if matrix_id == "CNS2m":
             edge_info_sheet = edge_info[edge_info["male_or_female"] == "male"]
         elif matrix_id == "CNS2f":
@@ -118,3 +156,21 @@ if __name__ == "__main__":
         edge_info_sheet.to_csv(
             output_folder / f"{matrix_id}_edge_info.csv", index=False
         )
+        print(
+            f"Saved {matrix_id}_edge_info.csv in {output_folder} folder",
+        )
+
+
+# Check that the generated CSVs can be loaded into Connections
+print("Checking whether CSV files can be used to created Connections object")
+for matrix_id in ["CNS2f", "CNS2m"]:
+    output_folder = DATA_FOLDER / matrix_id
+    connections = Connections.from_files(
+        node_info=output_folder / f"{matrix_id}_node_info.csv",
+        edge_table=output_folder / f"{matrix_id}_edge_table.csv",
+        edge_info=output_folder / f"{matrix_id}_edge_info.csv",
+        edge_info_from_col="origin_region_idx",
+        edge_info_to_col="termination_region_idx",
+        node_index_column="node_idx",
+    )
+    print(f"Successfully created Connections for {matrix_id}")
