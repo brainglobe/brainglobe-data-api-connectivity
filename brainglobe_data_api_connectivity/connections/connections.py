@@ -1,5 +1,6 @@
+import warnings
 from pathlib import Path
-from typing import Any, Callable, Container, Hashable, Iterable
+from typing import Any, Callable, Container, Hashable, Iterable, Tuple
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -429,6 +430,62 @@ class Connections:
             pl.col(self._node_internal_index_col).is_in(node_indexes)
         )
 
+    def _get_unique_node_index(self, node_id: dict[str, str | int]) -> int:
+        """Return the internal index for a node.
+
+        Also checks whether node is valid (existent and unique).
+
+        Args:
+            node_id:
+                Information identifying the node.
+
+        Returns:
+            Internal index of the identified node.
+
+        Raises:
+            ValueError:
+                If `node_id` does not identify exactly one node.
+        """
+        node_indexes = self.node_indexes_from_information(**node_id).to_list()
+
+        if len(node_indexes) != 1:
+            raise ValueError(
+                "Expected 1 unique node, "
+                f"but got {len(node_indexes)} for {node_id}."
+            )
+
+        return node_indexes[0]
+
+    def _get_available_connection_lookup(
+        self,
+        connections_lookup: ConnectionsLookup,
+    ) -> ConnectionsLookup:
+        """Set the connection lookup source based on the available information.
+
+        If all connections are requested but edge information is unavailable,
+        warn the user and fall back to connections reported by the graph.
+
+        Args:
+            connections_lookup:
+                Requested source for connection lookup.
+
+        Returns:
+            The requested lookup source if available; otherwise,
+            `ConnectionsLookup.REPORTED`.
+        """
+        if (
+            connections_lookup == ConnectionsLookup.ALL
+            and self.edge_info is None
+        ):
+            warnings.warn(
+                "No edge information available. "
+                "Using graph information instead.",
+                UserWarning,
+            )
+            return ConnectionsLookup.REPORTED
+
+        return connections_lookup
+
     def direct_connections(
         self,
         node_internal_index: int,
@@ -520,3 +577,123 @@ class Connections:
                 )
 
         return connections_as_input, connections_as_output
+
+    def _direct_connection_from_edge_info(
+        self,
+        node0: int | dict[str, str | int],
+        node1: int | dict[str, str | int],
+        node0_as: NodeIs,
+    ) -> Tuple[bool, pl.DataFrame]:
+        """"""
+
+        node0_idx, node1_idx = [
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+            for node in [node0, node1]
+        ]
+
+        assert self.edge_info is not None
+
+        from_col = pl.col(self.edge_info_from_col)
+        to_col = pl.col(self.edge_info_to_col)
+
+        if node0_as == NodeIs.INPUT:
+            connections = self.edge_info.filter(
+                (from_col == node0_idx) & (to_col == node1_idx)
+            )
+
+        elif node0_as == NodeIs.OUTPUT:
+            connections = self.edge_info.filter(
+                (from_col == node1_idx) & (to_col == node0_idx)
+            )
+
+        else:
+            connections = self.edge_info.filter(
+                ((from_col == node0_idx) & (to_col == node1_idx))
+                | ((from_col == node1_idx) & (to_col == node0_idx))
+            )
+
+        return not connections.is_empty(), connections
+
+    def _direct_connection_from_network(
+        self,
+        node0: int | dict[str, str | int],
+        node1: int | dict[str, str | int],
+        node0_as: NodeIs,
+    ) -> Tuple[bool, pl.DataFrame]:
+        """"""
+
+        node0_idx, node1_idx = [
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+            for node in [node0, node1]
+        ]
+
+        node0_id, node1_id = [
+            next(iter(node.values())) if isinstance(node, dict) else node
+            for node in (node0, node1)
+        ]  # stays idx if this is used as input
+
+        connections = []
+
+        if node0_as is not NodeIs.OUTPUT:
+            if self.network.has_edge(node0_idx, node1_idx):
+                edge_data = self.network.get_edge_data(node0_idx, node1_idx)
+                connections.append(
+                    {"from": node0_id, "to": node1_id, "value": edge_data}
+                )
+
+        if node0_as is not NodeIs.INPUT:
+            if self.network.has_edge(node1_idx, node0_idx):
+                edge_data = self.network.get_edge_data(node1_idx, node0_idx)
+                connections.append(
+                    {"from": node1_id, "to": node0_id, "value": edge_data}
+                )
+
+        connections_df = pl.DataFrame(connections)
+        return not connections_df.is_empty(), connections_df
+
+    def direct_connection_between(
+        self,
+        node0: int | dict[str, str | int],
+        node1: int | dict[str, str | int],
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+        node0_as: NodeIs = NodeIs.ANY,
+    ) -> Tuple[bool, pl.DataFrame]:
+        """Report direct connections between two nodes.
+
+        By default, look for direct connections in either direction between
+        `node0` and `node1`.
+
+        Args:
+            node0:
+                Index (int) or node information (dict) identifying node0.
+            node1:
+                Index (int) or node information (dict) identifying node1.
+            connections_lookup:
+                Source from which to find connections.
+            node0_as:
+                Role node0 should play in the connection.
+
+        Returns:
+            Whether a direct connection exists (bool) and the matching
+            connections (pl.DataFrame).
+        """
+        connections_lookup = self._get_available_connection_lookup(
+            connections_lookup
+        )
+
+        if connections_lookup == ConnectionsLookup.ALL:
+            return self._direct_connection_from_edge_info(
+                node0,
+                node1,
+                node0_as,
+            )
+
+        return self._direct_connection_from_network(
+            node0,
+            node1,
+            node0_as,
+        )
