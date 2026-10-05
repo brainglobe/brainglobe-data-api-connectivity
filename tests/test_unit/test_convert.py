@@ -38,7 +38,7 @@ from brainglobe_data_api_connectivity.utils.convert import (
                 ]
             ),
             False,
-            pd.Series([0, 1, 2, 3]),
+            pd.Series([0, 1, 2]),
             pd.DataFrame(
                 [
                     [0, 1, 1],
