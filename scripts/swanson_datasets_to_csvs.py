@@ -84,7 +84,7 @@ if __name__ == "__main__":
         region_ids = node_info["abbr"] + "_" + node_info["side"].astype(str)
         node_info["region_id"] = region_ids
         node_info = node_info.replace("•", 0)
-        node_info.insert(0, "node_idx", range(len(node_info)))
+        node_info.insert(0, "region_idx", range(len(node_info)))
 
         # Load and validate matrix and ids
         processed_matrix = excel.get_df_from_excel(
@@ -96,20 +96,7 @@ if __name__ == "__main__":
 
         edge_table_processed = convert.convert_matrix_to_edge_table(
             processed_matrix,
-            region_ids=node_info["node_idx"],
-        )
-
-        # Save outputs
-        output_folder = DATA_FOLDER / matrix_id
-        output_folder.mkdir(exist_ok=True)
-
-        edge_table_processed.to_csv(
-            output_folder / f"{matrix_id}_edge_table.csv",
-            index=False,
-            header=False,
-        )
-        node_info.to_csv(
-            output_folder / f"{matrix_id}_node_info.csv", index=False
+            region_ids=node_info["region_idx"],
         )
 
         # Save outputs
@@ -134,7 +121,7 @@ if __name__ == "__main__":
     for region in ["origin", "termination"]:
         edge_info[f"{region}_region_idx"] = (
             edge_info[f"{region}_region_id"]
-            .map(dict(zip(node_info["region_id"], node_info["node_idx"])))
+            .map(dict(zip(node_info["region_id"], node_info["region_idx"])))
             .astype("Int64")
         )
 
@@ -171,7 +158,7 @@ for matrix_id in ["CNS2f", "CNS2m"]:
         edge_info=output_folder / f"{matrix_id}_edge_info.csv",
         edge_info_from_col="origin_region_idx",
         edge_info_to_col="termination_region_idx",
-        node_index_column="node_idx",
+        node_index_column="region_idx",
     )
     print(f"Successfully created Connections for {matrix_id}")
     print(f"Number of nodes: {connections.network.num_nodes()}")
