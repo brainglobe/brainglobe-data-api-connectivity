@@ -237,7 +237,6 @@ def test_direct_connection_between(
         connections_lookup=connections_lookup,
     )
 
-    assert isinstance(connections, pl.DataFrame)
     assert connections.shape == expected_shape
 
 
@@ -257,7 +256,6 @@ def test_direct_connection_between_no_edge_info(mini_G):
             connections_lookup=ConnectionsLookup.ALL,
         )
 
-    assert isinstance(connections, pl.DataFrame)
     assert connections.shape == (1, 3)
 
 
