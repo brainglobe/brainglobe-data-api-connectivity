@@ -673,8 +673,7 @@ class Connections:
                 Role node0 should play in the connection.
 
         Returns:
-            Whether a direct connection exists (bool) and the matching
-            connections (pl.DataFrame).
+            Matching connections (pl.DataFrame), empty if none exist.
         """
         connections_lookup = self._get_available_connection_lookup(
             connections_lookup
