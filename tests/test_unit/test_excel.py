@@ -134,24 +134,16 @@ def test_normalise_index_range(start, end, expected):
     [
         pytest.param(
             "mini-nodes-matrix.xlsx",
-            "connectivity",
-            ("A2", "E6"),
-            0,
+            "combined_header",
+            ("A2", "B7"),
+            [0, 1],
             pl.DataFrame(
                 {
-                    "name": ["A", "B", "C", "D"],
-                    "idx": [0, 1, 2, 3],
-                    "group": ["AB", "AB", "C", "D"],
-                    "notes": [
-                        "A is part of group AB",
-                        "B is part of group AB",
-                        "C is part of group C",
-                        "D is part of group D",
-                    ],
-                    "custom_index": [1, 2, 3, 4],
+                    "node_name": ["A", "B", "C", "D"],
+                    "node_idx": [0, 1, 2, 3],
                 }
             ),
-            id="node information",
+            id="node information (combined header)",
         ),
         pytest.param(
             "mini-nodes-matrix.xlsx",
@@ -171,7 +163,7 @@ def test_normalise_index_range(start, end, expected):
         pytest.param(
             "mini-edge-info.xlsx",
             "edge_info",
-            ("A2", "G7"),
+            ("A2", "E7"),
             0,
             pl.DataFrame(
                 {
@@ -180,20 +172,6 @@ def test_normalise_index_range(start, end, expected):
                     "from": [0, 1, 0, 0, 2],
                     "to": [1, 2, 2, 2, 3],
                     "used": ["yes", "yes", "yes", "no", "yes"],
-                    "paper": [
-                        "author et al., 1998",
-                        "author et al., 2025",
-                        "author et al., 2010",
-                        "author et al., 2020",
-                        "author et al., 2020",
-                    ],
-                    "strength": [
-                        "weak (0.1)",
-                        "medium (1.0)",
-                        "strong (10.0)",
-                        "medium (1.0)",
-                        "strong (10.0)",
-                    ],
                 }
             ),
             id="edge information",
