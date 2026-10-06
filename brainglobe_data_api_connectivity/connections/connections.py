@@ -583,7 +583,7 @@ class Connections:
         node0: int | dict[str, str | int],
         node1: int | dict[str, str | int],
         node0_as: NodeIs,
-    ) -> tuple[bool, pl.DataFrame]:
+    ) -> pl.DataFrame:
         """"""
 
         node0_idx, node1_idx = [
@@ -614,14 +614,14 @@ class Connections:
                 | ((from_col == node1_idx) & (to_col == node0_idx))
             )
 
-        return not connections.is_empty(), connections
+        return pl.DataFrame(connections)
 
     def _direct_connection_from_network(
         self,
         node0: int | dict[str, str | int],
         node1: int | dict[str, str | int],
         node0_as: NodeIs,
-    ) -> tuple[bool, pl.DataFrame]:
+    ) -> pl.DataFrame:
         """"""
 
         node0_idx, node1_idx = [
@@ -652,8 +652,7 @@ class Connections:
                     {"from": node1_id, "to": node0_id, "value": edge_data}
                 )
 
-        connections_df = pl.DataFrame(connections)
-        return not connections_df.is_empty(), connections_df
+        return pl.DataFrame(connections)
 
     def direct_connection_between(
         self,
