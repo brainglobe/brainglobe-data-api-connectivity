@@ -584,7 +584,7 @@ class Connections:
         node1: int | dict[str, str | int],
         node0_as: NodeIs,
     ) -> pl.DataFrame:
-        """"""
+        """Return direct connections between two nodes from `edge_info`."""
 
         node0_idx, node1_idx = [
             self._get_unique_node_index(node)
@@ -622,7 +622,7 @@ class Connections:
         node1: int | dict[str, str | int],
         node0_as: NodeIs,
     ) -> pl.DataFrame:
-        """"""
+        """Return direct connections between two nodes from the network."""
 
         node0_idx, node1_idx = [
             self._get_unique_node_index(node)
