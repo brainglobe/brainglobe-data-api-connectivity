@@ -42,11 +42,7 @@ def convert_matrix_to_edge_table(
             (rows.ravel(), cols.ravel(), weights.ravel())
         )
 
-    edge_table_df = pl.DataFrame(
-        edge_table,
-        schema=["from", "to", "weight"],
-        orient="row",
-    )
+    edge_table_df = pl.DataFrame(edge_table, schema=["from", "to", "weight"])
 
     if region_ids is not None:
         region_map = dict(enumerate(region_ids))
