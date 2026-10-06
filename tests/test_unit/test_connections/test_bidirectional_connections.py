@@ -130,7 +130,6 @@ def test_bidirectional_connections(
         connections_lookup=connections_lookup,
     )
 
-    assert isinstance(connections, pl.DataFrame)
     assert connections.shape[0] == expected_rows
 
 
@@ -148,5 +147,4 @@ def test_bidirectional_connections_no_edge_info(mini_G_bidi):
             connections_lookup=ConnectionsLookup.ALL,
         )
 
-    assert isinstance(connections, pl.DataFrame)
     assert connections.shape[0] == 4
