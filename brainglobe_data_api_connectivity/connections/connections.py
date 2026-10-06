@@ -599,21 +599,17 @@ class Connections:
         to_col = pl.col(self.edge_info_to_col)
 
         if node0_as == NodeIs.INPUT:
-            connections = self.edge_info.filter(
-                (from_col == node0_idx) & (to_col == node1_idx)
-            )
+            connection_filter = (from_col == node0_idx) & (to_col == node1_idx)
 
         elif node0_as == NodeIs.OUTPUT:
-            connections = self.edge_info.filter(
-                (from_col == node1_idx) & (to_col == node0_idx)
-            )
+            connection_filter = (from_col == node1_idx) & (to_col == node0_idx)
 
         else:
-            connections = self.edge_info.filter(
-                ((from_col == node0_idx) & (to_col == node1_idx))
-                | ((from_col == node1_idx) & (to_col == node0_idx))
-            )
+            connection_filter = (
+                (from_col == node0_idx) & (to_col == node1_idx)
+            ) | ((from_col == node1_idx) & (to_col == node0_idx))
 
+        connections = self.edge_info.filter(connection_filter)
         return pl.DataFrame(connections)
 
     def _direct_connection_from_network(
