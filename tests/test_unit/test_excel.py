@@ -1,8 +1,11 @@
+import polars as pl
 import pytest
+from polars.testing import assert_frame_equal
 
 from brainglobe_data_api_connectivity.io.excel import (
     cell_reference_to_indices,
     column_reference_to_index,
+    get_df_from_excel,
     normalise_index_range,
     validate_cell_range,
     validate_cell_reference,
@@ -124,3 +127,33 @@ def test_validate_cell_range(cell_range, error, raises_error):
 def test_normalise_index_range(start, end, expected):
     """Indices shouldalways be returned in top‑left to bottom‑right order."""
     assert normalise_index_range(start, end) == expected
+
+
+def test_get_df_from_excel_loads_expected_range(tmp_path):
+    """Load the requested Excel range into the expected DataFrame."""
+    file = tmp_path / "matrix.xlsx"
+
+    source = pl.DataFrame(
+        {
+            "A": [1, 2, 3, 4],
+            "B": [5, 6, 7, 8],
+            "C": [9, 10, 11, 12],
+        }
+    )
+    source.write_excel(file, worksheet="matrix")
+
+    result = get_df_from_excel(
+        file,
+        "matrix",
+        ("B2", "C4"),
+        header=0,
+    )
+
+    expected = pl.DataFrame(
+        {
+            "B": [6, 7],
+            "C": [10, 11],
+        }
+    )
+
+    assert_frame_equal(result, expected)
