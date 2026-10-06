@@ -1,6 +1,6 @@
 import warnings
 from pathlib import Path
-from typing import Any, Callable, Container, Hashable, Iterable, Tuple
+from typing import Any, Callable, Container, Hashable, Iterable
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -583,8 +583,8 @@ class Connections:
         node0: int | dict[str, str | int],
         node1: int | dict[str, str | int],
         node0_as: NodeIs,
-    ) -> Tuple[bool, pl.DataFrame]:
-        """"""
+    ) -> pl.DataFrame:
+        """Return direct connections between two nodes from `edge_info`."""
 
         node0_idx, node1_idx = [
             self._get_unique_node_index(node)
@@ -599,30 +599,26 @@ class Connections:
         to_col = pl.col(self.edge_info_to_col)
 
         if node0_as == NodeIs.INPUT:
-            connections = self.edge_info.filter(
-                (from_col == node0_idx) & (to_col == node1_idx)
-            )
+            connection_filter = (from_col == node0_idx) & (to_col == node1_idx)
 
         elif node0_as == NodeIs.OUTPUT:
-            connections = self.edge_info.filter(
-                (from_col == node1_idx) & (to_col == node0_idx)
-            )
+            connection_filter = (from_col == node1_idx) & (to_col == node0_idx)
 
         else:
-            connections = self.edge_info.filter(
-                ((from_col == node0_idx) & (to_col == node1_idx))
-                | ((from_col == node1_idx) & (to_col == node0_idx))
-            )
+            connection_filter = (
+                (from_col == node0_idx) & (to_col == node1_idx)
+            ) | ((from_col == node1_idx) & (to_col == node0_idx))
 
-        return not connections.is_empty(), connections
+        connections = self.edge_info.filter(connection_filter)
+        return pl.DataFrame(connections)
 
     def _direct_connection_from_network(
         self,
         node0: int | dict[str, str | int],
         node1: int | dict[str, str | int],
         node0_as: NodeIs,
-    ) -> Tuple[bool, pl.DataFrame]:
-        """"""
+    ) -> pl.DataFrame:
+        """Return direct connections between two nodes from the network."""
 
         node0_idx, node1_idx = [
             self._get_unique_node_index(node)
@@ -638,22 +634,21 @@ class Connections:
 
         connections = []
 
-        if node0_as is not NodeIs.OUTPUT:
+        if node0_as != NodeIs.OUTPUT:
             if self.network.has_edge(node0_idx, node1_idx):
                 edge_data = self.network.get_edge_data(node0_idx, node1_idx)
                 connections.append(
                     {"from": node0_id, "to": node1_id, "value": edge_data}
                 )
 
-        if node0_as is not NodeIs.INPUT:
+        if node0_as != NodeIs.INPUT:
             if self.network.has_edge(node1_idx, node0_idx):
                 edge_data = self.network.get_edge_data(node1_idx, node0_idx)
                 connections.append(
                     {"from": node1_id, "to": node0_id, "value": edge_data}
                 )
 
-        connections_df = pl.DataFrame(connections)
-        return not connections_df.is_empty(), connections_df
+        return pl.DataFrame(connections)
 
     def direct_connection_between(
         self,
@@ -661,7 +656,7 @@ class Connections:
         node1: int | dict[str, str | int],
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
         node0_as: NodeIs = NodeIs.ANY,
-    ) -> Tuple[bool, pl.DataFrame]:
+    ) -> tuple[bool, pl.DataFrame]:
         """Report direct connections between two nodes.
 
         By default, look for direct connections in either direction between
