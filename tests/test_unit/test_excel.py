@@ -129,31 +129,86 @@ def test_normalise_index_range(start, end, expected):
     assert normalise_index_range(start, end) == expected
 
 
-def test_get_df_from_excel_loads_expected_range(tmp_path):
-    """Load the requested Excel range into the expected DataFrame."""
-    file = tmp_path / "matrix.xlsx"
-
-    source = pl.DataFrame(
-        {
-            "A": [1, 2, 3, 4],
-            "B": [5, 6, 7, 8],
-            "C": [9, 10, 11, 12],
-        }
-    )
-    source.write_excel(file, worksheet="matrix")
-
+@pytest.mark.parametrize(
+    ["filename", "sheet_name", "data_range", "header", "expected"],
+    [
+        pytest.param(
+            "mini-nodes-matrix.xlsx",
+            "connectivity",
+            ("A2", "E6"),
+            0,
+            pl.DataFrame(
+                {
+                    "name": ["A", "B", "C", "D"],
+                    "idx": [0, 1, 2, 3],
+                    "group": ["AB", "AB", "C", "D"],
+                    "notes": [
+                        "A is part of group AB",
+                        "B is part of group AB",
+                        "C is part of group C",
+                        "D is part of group D",
+                    ],
+                    "custom_index": [1, 2, 3, 4],
+                }
+            ),
+            id="node information",
+        ),
+        pytest.param(
+            "mini-nodes-matrix.xlsx",
+            "connectivity",
+            ("F3", "I6"),
+            None,
+            pl.DataFrame(
+                {
+                    "0": [0, 0, 0, 0],
+                    "1": [0.1, 0.0, 0.0, 0.0],
+                    "2": [10, 1, 0, 0],
+                    "3": [0, 0, 10, 0],
+                }
+            ),
+            id="matrix without header",
+        ),
+        pytest.param(
+            "mini-edge-info.xlsx",
+            "edge_info",
+            ("A2", "G7"),
+            0,
+            pl.DataFrame(
+                {
+                    "from_id": ["A", "B", "A", "A", "C"],
+                    "to_id": ["B", "C", "C", "C", "D"],
+                    "from": [0, 1, 0, 0, 2],
+                    "to": [1, 2, 2, 2, 3],
+                    "used": ["yes", "yes", "yes", "no", "yes"],
+                    "paper": [
+                        "author et al., 1998",
+                        "author et al., 2025",
+                        "author et al., 2010",
+                        "author et al., 2020",
+                        "author et al., 2020",
+                    ],
+                    "strength": [
+                        "weak (0.1)",
+                        "medium (1.0)",
+                        "strong (10.0)",
+                        "medium (1.0)",
+                        "strong (10.0)",
+                    ],
+                }
+            ),
+            id="edge information",
+        ),
+    ],
+)
+def test_get_df_from_excel(
+    DATA_DIR, filename, sheet_name, data_range, header, expected
+):
+    """Extract mini_G data from the saved Excel files."""
     result = get_df_from_excel(
-        file,
-        "matrix",
-        ("B2", "C4"),
-        header=0,
-    )
-
-    expected = pl.DataFrame(
-        {
-            "B": [6, 7],
-            "C": [10, 11],
-        }
+        DATA_DIR / filename,
+        sheet_name=sheet_name,
+        data_range=data_range,
+        header=header,
     )
 
     assert_frame_equal(result, expected)

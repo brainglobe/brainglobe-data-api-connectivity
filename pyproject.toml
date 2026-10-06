@@ -8,6 +8,7 @@ dynamic = ["version"]
 
 dependencies = [
     "polars",
+    "pyarrow",
     "rustworkx",
 ]
 
@@ -35,6 +36,7 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
+  "fastexcel",
   "pytest",
   "pytest-cov",
   "pytest-mock",
