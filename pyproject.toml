@@ -7,6 +7,8 @@ requires-python = ">=3.12.0"
 dynamic = ["version"]
 
 dependencies = [
+    "fastexcel",
+    "numpy",
     "polars",
     "pyarrow",
     "rustworkx",
@@ -36,7 +38,6 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-  "fastexcel",
   "pytest",
   "pytest-cov",
   "pytest-mock",
