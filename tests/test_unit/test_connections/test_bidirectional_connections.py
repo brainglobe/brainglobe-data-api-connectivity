@@ -71,56 +71,48 @@ def mini_G_bidi(nodes, bidi_edge_list, bidi_edge_info) -> Connections:
     [
         "node",
         "connections_lookup",
-        "expected_bool",
         "expected_rows",
     ],
     [
         pytest.param(
             {"name": "A"},
             ConnectionsLookup.ALL,
-            True,
             2,
             id="A (all)",
         ),
         pytest.param(
             {"name": "A"},
             ConnectionsLookup.REPORTED,
-            True,
             2,
             id="A (reported)",
         ),
         pytest.param(
             {"name": "B"},
             ConnectionsLookup.ALL,
-            True,
             5,
             id="B (all)",
         ),
         pytest.param(
             1,
             ConnectionsLookup.ALL,
-            True,
             5,
             id="B by index (all)",
         ),
         pytest.param(
             {"name": "B"},
             ConnectionsLookup.REPORTED,
-            True,
             4,
             id="B (reported)",
         ),
         pytest.param(
             {"name": "D"},
             ConnectionsLookup.ALL,
-            True,
             2,
             id="D (all)",
         ),
         pytest.param(
             {"name": "D"},
             ConnectionsLookup.REPORTED,
-            False,
             0,
             id="D (reported)",
         ),
@@ -130,16 +122,15 @@ def test_bidirectional_connections(
     mini_G_bidi,
     node,
     connections_lookup,
-    expected_bool,
     expected_rows,
 ):
     """Test finding all bidirectional connections for a node."""
-    has_connection, connections = mini_G_bidi.bidirectional_connections(
+    connections = mini_G_bidi.bidirectional_connections(
         node,
         connections_lookup=connections_lookup,
     )
 
-    assert has_connection is expected_bool
+    assert isinstance(connections, pl.DataFrame)
     assert connections.shape[0] == expected_rows
 
 
@@ -152,10 +143,10 @@ def test_bidirectional_connections_no_edge_info(mini_G_bidi):
         match="No edge information available. "
         "Using graph information instead.",
     ):
-        has_connection, connections = mini_G_bidi.bidirectional_connections(
+        connections = mini_G_bidi.bidirectional_connections(
             {"name": "B"},
             connections_lookup=ConnectionsLookup.ALL,
         )
 
-    assert has_connection is True
+    assert isinstance(connections, pl.DataFrame)
     assert connections.shape[0] == 4

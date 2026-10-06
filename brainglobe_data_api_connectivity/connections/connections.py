@@ -696,7 +696,7 @@ class Connections:
         self,
         node: int | dict[str, str | int],
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
-    ) -> Tuple[bool, pl.DataFrame]:
+    ) -> pl.DataFrame:
         """Report all bidirectional connections of a node.
 
         A connection is considered bidirectional when an edge exists both from
@@ -709,8 +709,8 @@ class Connections:
                 Source from which to find connections.
 
         Returns:
-            Whether any bidirectional connections exist (bool) and the matching
-            connections (pl.DataFrame).
+            Matching bidirectional connections (pl.DataFrame), empty if none
+            exist.
         """
 
         connections_lookup = self._get_available_connection_lookup(
@@ -735,7 +735,7 @@ class Connections:
         connection_frames = []
 
         for other_idx in bidirectional_indexes:
-            _, connections = self.direct_connection_between(
+            connections = self.direct_connection_between(
                 node_idx,
                 other_idx,
                 connections_lookup=connections_lookup,
@@ -744,8 +744,6 @@ class Connections:
             connection_frames.append(connections)
 
         if not connection_frames:
-            return False, pl.DataFrame()
+            return pl.DataFrame()
 
-        connections = pl.concat(connection_frames)
-
-        return True, connections
+        return pl.concat(connection_frames)
