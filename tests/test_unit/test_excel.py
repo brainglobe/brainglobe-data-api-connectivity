@@ -1,7 +1,4 @@
-from pathlib import Path
-
 import pytest
-from openpyxl import Workbook
 
 from brainglobe_data_api_connectivity.io.excel import (
     cell_reference_to_indices,
@@ -102,28 +99,6 @@ def test_validate_cell_range(cell_range, error, raises_error):
     else:
         with raises_error(error):
             validate_cell_range(cell_range)
-
-
-@pytest.fixture
-def excel_test_connectivity_matrix(tmp_path: Path):
-    """Simple connectivity matrix for use in testing excel conversion."""
-
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = "Sheet1"
-    sheet.append(["", "area_1", "area_2", "area_3", "area_4"])
-    for row in [
-        ["area_1", 0, 1, 2, 3],
-        ["area_2", 1, 0, 2, 3],
-        ["area_3", 1, 2, 0, 3],
-        ["area_4", 9, 9, 9, 0],
-    ]:
-        sheet.append(row)
-
-    file_path = tmp_path / "test_connectivity_matrix.xlsx"
-    workbook.save(file_path)
-    workbook.close()
-    return file_path
 
 
 @pytest.mark.parametrize(
