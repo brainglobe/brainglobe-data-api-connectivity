@@ -88,7 +88,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
         "node1",
         "node0_as",
         "connections_lookup",
-        "expected_bool",
         "expected_shape",
     ],
     [
@@ -97,7 +96,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "B"},
             NodeIs.ANY,
             ConnectionsLookup.ALL,
-            True,
             (1, 9),
             id="A and B",
         ),
@@ -106,7 +104,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             1,
             NodeIs.ANY,
             ConnectionsLookup.ALL,
-            True,
             (1, 9),
             id="A and B (by index)",
         ),
@@ -115,7 +112,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "A"},
             NodeIs.ANY,
             ConnectionsLookup.REPORTED,
-            True,
             (1, 3),
             id="B and A (reported only)",
         ),
@@ -124,7 +120,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             0,
             NodeIs.ANY,
             ConnectionsLookup.REPORTED,
-            True,
             (1, 3),
             id="B and A by index (reported only)",
         ),
@@ -133,7 +128,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "C"},
             NodeIs.ANY,
             ConnectionsLookup.ALL,
-            True,
             (2, 9),
             id="A and C (all)",
         ),
@@ -142,7 +136,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "C"},
             NodeIs.ANY,
             ConnectionsLookup.REPORTED,
-            True,
             (1, 3),
             id="A and C (reported only)",
         ),
@@ -151,7 +144,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "C"},
             NodeIs.INPUT,
             ConnectionsLookup.REPORTED,
-            True,
             (1, 3),
             id="A (as INPUT) and C (reported only)",
         ),
@@ -160,7 +152,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "C"},
             NodeIs.OUTPUT,
             ConnectionsLookup.REPORTED,
-            False,
             (0, 0),
             id="A (as OUTPUT) and C (reported only)",
         ),
@@ -169,7 +160,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "D"},
             NodeIs.ANY,
             ConnectionsLookup.REPORTED,
-            False,
             (0, 0),
             id="A and D (reported only)",
         ),
@@ -178,7 +168,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "A"},
             NodeIs.ANY,
             ConnectionsLookup.ALL,
-            True,
             (1, 9),
             id="B to A",
         ),
@@ -187,7 +176,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "A"},
             NodeIs.INPUT,
             ConnectionsLookup.ALL,
-            False,
             (0, 9),
             id="B (as INPUT) and A (no direct connection)",
         ),
@@ -196,7 +184,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "A"},
             NodeIs.OUTPUT,
             ConnectionsLookup.REPORTED,
-            True,
             (1, 3),
             id="B (as OUTPUT) and A (reported only)",
         ),
@@ -205,7 +192,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "A"},
             NodeIs.OUTPUT,
             ConnectionsLookup.ALL,
-            True,
             (1, 9),
             id="B (as OUTPUT) and A",
         ),
@@ -214,7 +200,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "B"},
             NodeIs.INPUT,
             ConnectionsLookup.ALL,
-            True,
             (1, 9),
             id="A (as INPUT) and B",
         ),
@@ -223,7 +208,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "B"},
             NodeIs.OUTPUT,
             ConnectionsLookup.ALL,
-            False,
             (0, 9),
             id="A (as OUTPUT) and B (no direct connection)",
         ),
@@ -232,7 +216,6 @@ def mini_G(nodes, edge_list, edge_info) -> Connections:
             {"name": "D"},
             NodeIs.ANY,
             ConnectionsLookup.ALL,
-            False,
             (0, 9),
             id="A and D (no direct connection)",
         ),
@@ -244,18 +227,17 @@ def test_direct_connection_between(
     node1,
     node0_as,
     connections_lookup,
-    expected_bool,
     expected_shape,
 ):
     """Test finding direct connections between two nodes."""
-    has_connection, connections = mini_G.direct_connection_between(
+    connections = mini_G.direct_connection_between(
         node0,
         node1,
         node0_as=node0_as,
         connections_lookup=connections_lookup,
     )
 
-    assert has_connection == expected_bool
+    assert isinstance(connections, pl.DataFrame)
     assert connections.shape == expected_shape
 
 
@@ -268,14 +250,14 @@ def test_direct_connection_between_no_edge_info(mini_G):
         match="No edge information available. "
         "Using graph information instead.",
     ):
-        has_connection, connections = mini_G.direct_connection_between(
+        connections = mini_G.direct_connection_between(
             {"name": "A"},
             {"name": "C"},
             node0_as=NodeIs.ANY,
             connections_lookup=ConnectionsLookup.ALL,
         )
 
-    assert has_connection is True
+    assert isinstance(connections, pl.DataFrame)
     assert connections.shape == (1, 3)
 
 
