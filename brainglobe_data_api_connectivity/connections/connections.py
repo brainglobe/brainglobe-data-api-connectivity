@@ -638,14 +638,14 @@ class Connections:
 
         connections = []
 
-        if node0_as is not NodeIs.OUTPUT:
+        if node0_as != NodeIs.OUTPUT:
             if self.network.has_edge(node0_idx, node1_idx):
                 edge_data = self.network.get_edge_data(node0_idx, node1_idx)
                 connections.append(
                     {"from": node0_id, "to": node1_id, "value": edge_data}
                 )
 
-        if node0_as is not NodeIs.INPUT:
+        if node0_as != NodeIs.INPUT:
             if self.network.has_edge(node1_idx, node0_idx):
                 edge_data = self.network.get_edge_data(node1_idx, node0_idx)
                 connections.append(
