@@ -1,6 +1,6 @@
 import warnings
 from pathlib import Path
-from typing import Any, Callable, Container, Hashable, Iterable, Tuple
+from typing import Any, Callable, Container, Hashable, Iterable
 
 import polars as pl
 from rustworkx import PyDiGraph
@@ -583,7 +583,7 @@ class Connections:
         node0: int | dict[str, str | int],
         node1: int | dict[str, str | int],
         node0_as: NodeIs,
-    ) -> Tuple[bool, pl.DataFrame]:
+    ) -> tuple[bool, pl.DataFrame]:
         """"""
 
         node0_idx, node1_idx = [
@@ -621,7 +621,7 @@ class Connections:
         node0: int | dict[str, str | int],
         node1: int | dict[str, str | int],
         node0_as: NodeIs,
-    ) -> Tuple[bool, pl.DataFrame]:
+    ) -> tuple[bool, pl.DataFrame]:
         """"""
 
         node0_idx, node1_idx = [
@@ -661,7 +661,7 @@ class Connections:
         node1: int | dict[str, str | int],
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
         node0_as: NodeIs = NodeIs.ANY,
-    ) -> Tuple[bool, pl.DataFrame]:
+    ) -> tuple[bool, pl.DataFrame]:
         """Report direct connections between two nodes.
 
         By default, look for direct connections in either direction between
