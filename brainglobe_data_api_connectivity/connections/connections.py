@@ -656,7 +656,7 @@ class Connections:
         node1: int | dict[str, str | int],
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
         node0_as: NodeIs = NodeIs.ANY,
-    ) -> tuple[bool, pl.DataFrame]:
+    ) -> pl.DataFrame:
         """Report direct connections between two nodes.
 
         By default, look for direct connections in either direction between
