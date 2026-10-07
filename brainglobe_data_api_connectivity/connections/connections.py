@@ -444,13 +444,18 @@ class Connections:
 
     def edge_info_filter(
         self,
-        filters: dict[str, Any],
+        filters: dict[str, Any] | None = None,
+        columns: list[str] | None = None,
     ) -> pl.DataFrame | None:
         """Return edge information matching the given filters.
 
         Args:
             filters:
-                Mapping of column names to values to filter by.
+                Mapping of column names to values to filter by. If omitted,
+                return all rows.
+            columns:
+                Columns to return, in the requested order. If omitted,
+                return all columns.
 
         Returns:
             Filtered edge information, or `None` if `.edge_info` is None.
@@ -460,7 +465,12 @@ class Connections:
                 "No edge information available to filter.", UserWarning
             )
             return None
-        return self.edge_info.filter(**filters)
+        edge_info = self.edge_info
+        if filters:
+            edge_info = edge_info.filter(**filters)
+        if columns is not None:
+            edge_info = edge_info.select(columns)
+        return edge_info
 
     def _get_unique_node_index(self, node_id: dict[str, str | int]) -> int:
         """Return the internal index for a node.
