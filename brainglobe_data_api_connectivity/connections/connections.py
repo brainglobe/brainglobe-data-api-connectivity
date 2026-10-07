@@ -442,6 +442,38 @@ class Connections:
             for column in self.edge_info.columns
         }
 
+    def _validate_edge_info_columns(self, columns: Iterable[str]) -> None:
+        """Validate edge information columns."""
+        available_columns = (
+            self.edge_info.columns if self.edge_info is not None else []
+        )
+        invalid_columns = [
+            column for column in columns if column not in available_columns
+        ]
+        if invalid_columns:
+            raise ValueError(
+                f"Unknown columns: {invalid_columns}. "
+                f"Available columns: {available_columns}"
+            )
+
+    def _validate_edge_info_filters(self, filters: dict[str, Any]) -> None:
+        """Validate filter names and values for edge information."""
+        available_filters = self.edge_info_filter_options()
+        invalid_filters = [
+            column for column in filters if column not in available_filters
+        ]
+        if invalid_filters:
+            raise ValueError(
+                f"Unknown columns: {invalid_filters}. "
+                f"Available columns: {list(available_filters)}"
+            )
+        for column, value in filters.items():
+            if value not in available_filters[column]:
+                raise ValueError(
+                    f"Unknown filter value {value!r} for column {column!r}. "
+                    f"Available values: {available_filters[column]}"
+                )
+
     def edge_info_filter(
         self,
         filters: dict[str, Any] | None = None,
@@ -459,6 +491,11 @@ class Connections:
 
         Returns:
             Filtered edge information, or `None` if `.edge_info` is None.
+
+        Raises:
+            ValueError:
+                If filters or selected columns contain unknown column names.
+                Also raised if a filter value is not available in its column.
         """
         if self.edge_info is None:
             warnings.warn(
@@ -467,8 +504,10 @@ class Connections:
             return None
         edge_info = self.edge_info
         if filters:
+            self._validate_edge_info_filters(filters)
             edge_info = edge_info.filter(**filters)
         if columns is not None:
+            self._validate_edge_info_columns(columns)
             edge_info = edge_info.select(columns)
         return edge_info
 
