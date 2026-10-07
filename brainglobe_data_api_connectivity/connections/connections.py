@@ -430,37 +430,61 @@ class Connections:
             pl.col(self._node_internal_index_col).is_in(node_indexes)
         )
 
-    def edge_info_filter_options(self) -> dict[str, list]:
-        """Return values available for filtering edge information."""
-        if self.edge_info is None:
-            return {}
+    def _get_unique_node_index(self, node_id: dict[str, str | int]) -> int:
+        """Return the internal index for a node.
 
-        return {
-            column: self.edge_info[column]
-            .unique(maintain_order=True)
-            .to_list()
-            for column in self.edge_info.columns
-        }
-
-    def edge_info_filter(
-        self,
-        filters: dict[str, Any],
-    ) -> pl.DataFrame | None:
-        """Return edge information matching the given filters.
+        Also checks whether node is valid (existent and unique).
 
         Args:
-            filters:
-                Mapping of column names to values to filter by.
+            node_id:
+                Information identifying the node.
 
         Returns:
-            Filtered edge information, or `None` if `.edge_info` is None.
+            Internal index of the identified node.
+
+        Raises:
+            ValueError:
+                If `node_id` does not identify exactly one node.
         """
-        if self.edge_info is None:
-            warnings.warn(
-                "No edge information available to filter.", UserWarning
+        node_indexes = self.node_indexes_from_information(**node_id).to_list()
+
+        if len(node_indexes) != 1:
+            raise ValueError(
+                "Expected 1 unique node, "
+                f"but got {len(node_indexes)} for {node_id}."
             )
-            return None
-        return self.edge_info.filter(**filters)
+
+        return node_indexes[0]
+
+    def _get_available_connection_lookup(
+        self,
+        connections_lookup: ConnectionsLookup,
+    ) -> ConnectionsLookup:
+        """Set the connection lookup source based on the available information.
+
+        If all connections are requested but edge information is unavailable,
+        warn the user and fall back to connections reported by the graph.
+
+        Args:
+            connections_lookup:
+                Requested source for connection lookup.
+
+        Returns:
+            The requested lookup source if available; otherwise,
+            `ConnectionsLookup.NETWORK`.
+        """
+        if (
+            connections_lookup == ConnectionsLookup.ALL
+            and self.edge_info is None
+        ):
+            warnings.warn(
+                "No edge information available. "
+                "Using graph information instead.",
+                UserWarning,
+            )
+            return ConnectionsLookup.NETWORK
+
+        return connections_lookup
 
     def direct_connections(
         self,
@@ -553,3 +577,173 @@ class Connections:
                 )
 
         return connections_as_input, connections_as_output
+
+    def _direct_connection_from_edge_info(
+        self,
+        node0: int | dict[str, str | int],
+        node1: int | dict[str, str | int],
+        node0_as: NodeIs,
+    ) -> pl.DataFrame:
+        """Return direct connections between two nodes from `edge_info`."""
+
+        self.edge_info: pl.DataFrame
+
+        node0_idx, node1_idx = [
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+            for node in [node0, node1]
+        ]
+
+        from_col = pl.col(self.edge_info_from_col)
+        to_col = pl.col(self.edge_info_to_col)
+
+        if node0_as == NodeIs.INPUT:
+            connection_filter = (from_col == node0_idx) & (to_col == node1_idx)
+
+        elif node0_as == NodeIs.OUTPUT:
+            connection_filter = (from_col == node1_idx) & (to_col == node0_idx)
+
+        else:
+            connection_filter = (
+                (from_col == node0_idx) & (to_col == node1_idx)
+            ) | ((from_col == node1_idx) & (to_col == node0_idx))
+
+        connections = self.edge_info.filter(connection_filter)
+        return pl.DataFrame(connections)
+
+    def _direct_connection_from_network(
+        self,
+        node0: int | dict[str, str | int],
+        node1: int | dict[str, str | int],
+        node0_as: NodeIs,
+    ) -> pl.DataFrame:
+        """Return direct connections between two nodes from the network."""
+
+        node0_idx, node1_idx = [
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+            for node in [node0, node1]
+        ]
+
+        node0_id, node1_id = [
+            next(iter(node.values())) if isinstance(node, dict) else node
+            for node in (node0, node1)
+        ]  # stays idx if this is used as input
+
+        connections = []
+
+        if node0_as != NodeIs.OUTPUT:
+            if self.network.has_edge(node0_idx, node1_idx):
+                edge_data = self.network.get_edge_data(node0_idx, node1_idx)
+                connections.append(
+                    {"from": node0_id, "to": node1_id, "value": edge_data}
+                )
+
+        if node0_as != NodeIs.INPUT:
+            if self.network.has_edge(node1_idx, node0_idx):
+                edge_data = self.network.get_edge_data(node1_idx, node0_idx)
+                connections.append(
+                    {"from": node1_id, "to": node0_id, "value": edge_data}
+                )
+
+        return pl.DataFrame(connections)
+
+    def direct_connection_between(
+        self,
+        node0: int | dict[str, str | int],
+        node1: int | dict[str, str | int],
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.NETWORK,
+        node0_as: NodeIs = NodeIs.ANY,
+    ) -> pl.DataFrame:
+        """Report direct connections between two nodes.
+
+        By default, look for direct connections in either direction between
+        `node0` and `node1`.
+
+        Args:
+            node0:
+                Index (int) or node information (dict) identifying node0.
+            node1:
+                Index (int) or node information (dict) identifying node1.
+            connections_lookup:
+                Source from which to find connections.
+            node0_as:
+                Role node0 should play in the connection.
+
+        Returns:
+            Matching connections (pl.DataFrame), empty if none exist.
+        """
+        connections_lookup = self._get_available_connection_lookup(
+            connections_lookup
+        )
+
+        if connections_lookup == ConnectionsLookup.ALL:
+            return self._direct_connection_from_edge_info(
+                node0,
+                node1,
+                node0_as,
+            )
+
+        return self._direct_connection_from_network(
+            node0,
+            node1,
+            node0_as,
+        )
+
+    def bidirectional_connections(
+        self,
+        node: int | dict[str, str | int],
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.NETWORK,
+    ) -> pl.DataFrame:
+        """Report all bidirectional connections of a node.
+
+        A connection is considered bidirectional when an edge exists both from
+        `node` to another node and from that node back to `node`.
+
+        Args:
+            node:
+                Index (int) or node information (dict) identifying the node.
+            connections_lookup:
+                Source from which to find connections.
+
+        Returns:
+            Matching bidirectional connections (pl.DataFrame), empty if none
+            exist.
+        """
+
+        connections_lookup = self._get_available_connection_lookup(
+            connections_lookup
+        )
+
+        node_idx = (
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+        )
+
+        connections_as_input, connections_as_output = self.direct_connections(
+            node_idx,
+            connections_lookup=connections_lookup,
+        )
+
+        bidirectional_indexes = set(connections_as_input) & set(
+            connections_as_output
+        )
+
+        connection_frames = []
+
+        for other_idx in bidirectional_indexes:
+            connections = self.direct_connection_between(
+                node_idx,
+                other_idx,
+                connections_lookup=connections_lookup,
+                node0_as=NodeIs.ANY,
+            )
+            connection_frames.append(connections)
+
+        if not connection_frames:
+            return pl.DataFrame()
+
+        return pl.concat(connection_frames)
