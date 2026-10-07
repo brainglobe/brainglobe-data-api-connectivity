@@ -4,7 +4,7 @@ from polars.testing import assert_frame_equal
 
 
 def test_edge_info_filter_options(mini_G) -> None:
-    """Return unique values for every column in first-occurrence order."""
+    """Return sorted unique values for every column."""
     filter_options = mini_G.edge_info_filter_options()
 
     assert filter_options == {
@@ -12,17 +12,17 @@ def test_edge_info_filter_options(mini_G) -> None:
         "to_id": ["B", "C", "D"],
         "from": [0, 1, 2],
         "to": [1, 2, 3],
-        "used": ["yes", "no"],
+        "used": ["no", "yes"],
         "paper": [
             "author et al., 1998",
-            "author et al., 2025",
             "author et al., 2010",
             "author et al., 2020",
+            "author et al., 2025",
         ],
         "strength": [
-            "weak (0.1)",
             "medium (1.0)",
             "strong (10.0)",
+            "weak (0.1)",
         ],
         "__idx_from": [
             0,

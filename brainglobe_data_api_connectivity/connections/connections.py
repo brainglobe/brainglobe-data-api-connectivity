@@ -6,6 +6,7 @@ import polars as pl
 from rustworkx import PyDiGraph
 
 from .._types import EdgeTable
+from ..utils.filtering import data_filter, filter_options
 from .node_contractions import sum_of_weights
 from .query_opts import ConnectionsLookup, NodeIs
 
@@ -435,44 +436,7 @@ class Connections:
         if self.edge_info is None:
             return {}
 
-        return {
-            column: self.edge_info[column]
-            .unique(maintain_order=True)
-            .to_list()
-            for column in self.edge_info.columns
-        }
-
-    def _validate_edge_info_columns(self, columns: Iterable[str]) -> None:
-        """Validate edge information columns."""
-        available_columns = (
-            self.edge_info.columns if self.edge_info is not None else []
-        )
-        invalid_columns = [
-            column for column in columns if column not in available_columns
-        ]
-        if invalid_columns:
-            raise ValueError(
-                f"Unknown columns: {invalid_columns}. "
-                f"Available columns: {available_columns}"
-            )
-
-    def _validate_edge_info_filters(self, filters: dict[str, Any]) -> None:
-        """Validate filter names and values for edge information."""
-        available_filters = self.edge_info_filter_options()
-        invalid_filters = [
-            column for column in filters if column not in available_filters
-        ]
-        if invalid_filters:
-            raise ValueError(
-                f"Unknown columns: {invalid_filters}. "
-                f"Available columns: {list(available_filters)}"
-            )
-        for column, value in filters.items():
-            if value not in available_filters[column]:
-                raise ValueError(
-                    f"Unknown filter value {value!r} for column {column!r}. "
-                    f"Available values: {available_filters[column]}"
-                )
+        return filter_options(self.edge_info)
 
     def edge_info_filter(
         self,
@@ -502,14 +466,7 @@ class Connections:
                 "No edge information available to filter.", UserWarning
             )
             return None
-        edge_info = self.edge_info
-        if filters:
-            self._validate_edge_info_filters(filters)
-            edge_info = edge_info.filter(**filters)
-        if columns is not None:
-            self._validate_edge_info_columns(columns)
-            edge_info = edge_info.select(columns)
-        return edge_info
+        return data_filter(self.edge_info, filters, columns)
 
     def _get_unique_node_index(self, node_id: dict[str, str | int]) -> int:
         """Return the internal index for a node.
