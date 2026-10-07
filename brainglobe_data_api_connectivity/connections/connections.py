@@ -586,14 +586,14 @@ class Connections:
     ) -> pl.DataFrame:
         """Return direct connections between two nodes from `edge_info`."""
 
+        self.edge_info: pl.DataFrame
+
         node0_idx, node1_idx = [
             self._get_unique_node_index(node)
             if isinstance(node, dict)
             else node
             for node in [node0, node1]
         ]
-
-        assert self.edge_info is not None
 
         from_col = pl.col(self.edge_info_from_col)
         to_col = pl.col(self.edge_info_to_col)
