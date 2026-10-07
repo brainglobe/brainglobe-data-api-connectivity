@@ -1,11 +1,11 @@
-from pathlib import Path
-
-import pandas as pd
+import polars as pl
 import pytest
+from polars.testing import assert_frame_equal
 
 from brainglobe_data_api_connectivity.io.excel import (
     cell_reference_to_indices,
     column_reference_to_index,
+    get_df_from_excel,
     normalise_index_range,
     validate_cell_range,
     validate_cell_reference,
@@ -104,25 +104,6 @@ def test_validate_cell_range(cell_range, error, raises_error):
             validate_cell_range(cell_range)
 
 
-@pytest.fixture
-def excel_test_connectivity_matrix(tmp_path: Path):
-    """Simple connectivity matrix for use in testing excel conversion."""
-
-    df = pd.DataFrame(
-        [
-            ["area_1", 0, 1, 2, 3],
-            ["area_2", 1, 0, 2, 3],
-            ["area_3", 1, 2, 0, 3],
-            ["area_4", 9, 9, 9, 0],
-        ],
-        columns=["", "area_1", "area_2", "area_3", "area_4"],
-    )
-
-    file_path = tmp_path / "test_connectivity_matrix.xlsx"
-    df.to_excel(file_path, sheet_name="Sheet1", index=False, header=True)
-    return file_path
-
-
 @pytest.mark.parametrize(
     ["start", "end", "expected"],
     [
@@ -146,3 +127,66 @@ def excel_test_connectivity_matrix(tmp_path: Path):
 def test_normalise_index_range(start, end, expected):
     """Indices shouldalways be returned in top‑left to bottom‑right order."""
     assert normalise_index_range(start, end) == expected
+
+
+@pytest.mark.parametrize(
+    ["filename", "sheet_name", "data_range", "header", "expected"],
+    [
+        pytest.param(
+            "mini-nodes-matrix.xlsx",
+            "combined_header",
+            ("A2", "B7"),
+            [0, 1],
+            pl.DataFrame(
+                {
+                    "node_name": ["A", "B", "C", "D"],
+                    "node_idx": [0, 1, 2, 3],
+                }
+            ),
+            id="node information (combined header)",
+        ),
+        pytest.param(
+            "mini-nodes-matrix.xlsx",
+            "connectivity",
+            ("F3", "I6"),
+            None,
+            pl.DataFrame(
+                {
+                    "0": [0, 0, 0, 0],
+                    "1": [0.1, 0.0, 0.0, 0.0],
+                    "2": [10, 1, 0, 0],
+                    "3": [0, 0, 10, 0],
+                }
+            ),
+            id="matrix without header",
+        ),
+        pytest.param(
+            "mini-edge-info.xlsx",
+            "edge_info",
+            ("A2", "E7"),
+            0,
+            pl.DataFrame(
+                {
+                    "from_id": ["A", "B", "A", "A", "C"],
+                    "to_id": ["B", "C", "C", "C", "D"],
+                    "from": [0, 1, 0, 0, 2],
+                    "to": [1, 2, 2, 2, 3],
+                    "used": ["yes", "yes", "yes", "no", "yes"],
+                }
+            ),
+            id="edge information",
+        ),
+    ],
+)
+def test_get_df_from_excel(
+    DATA_DIR, filename, sheet_name, data_range, header, expected
+):
+    """Extract mini_G data from the saved Excel files."""
+    result = get_df_from_excel(
+        DATA_DIR / filename,
+        sheet_name=sheet_name,
+        data_range=data_range,
+        header=header,
+    )
+
+    assert_frame_equal(result, expected)

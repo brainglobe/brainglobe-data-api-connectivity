@@ -1,4 +1,3 @@
-import pandas as pd
 import pytest
 
 from brainglobe_data_api_connectivity.utils.tidy import (
@@ -26,5 +25,5 @@ from brainglobe_data_api_connectivity.utils.tidy import (
 )
 def test_rename_columns(name, expected):
     """Test whether rename_columns works as expected."""
-    renamed = rename_columns(pd.Index([name]))[0]
+    renamed = rename_columns([name])[0]
     assert renamed == expected

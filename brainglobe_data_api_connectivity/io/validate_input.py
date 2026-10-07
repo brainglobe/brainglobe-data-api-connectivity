@@ -1,9 +1,9 @@
 """Validation of input data"""
 
-import pandas as pd
+import polars as pl
 
 
-def validate_adjacency_matrix(matrix: pd.DataFrame) -> None:
+def validate_adjacency_matrix(matrix: pl.DataFrame) -> None:
     """Check whether adjacency matrix is square, raising an error if not."""
     rows, cols = matrix.shape
 

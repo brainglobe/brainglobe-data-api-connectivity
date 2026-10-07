@@ -3,33 +3,69 @@
 import re
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 
 
 def get_df_from_excel(
     file: Path,
-    sheet_name: str,
-    data_range: tuple[str, str],
-    header: int | None = None,
-) -> pd.DataFrame:
+    sheet_name: str | None = None,
+    data_range: tuple[str, str] | None = None,
+    header: int | list[int] | None = None,
+) -> pl.DataFrame:
     """Return DataFrame sliced to given row/column ranges."""
-    col_range, row_range = get_cell_range(data_range)
+    skiprows, nrows, usecols = 0, None, None
+    if data_range is not None:
+        (start_col, end_col), (start_row, end_row) = get_cell_range(data_range)
+        skiprows = start_row - 1
+        nrows = end_row - start_row + 1
+        usecols = list(range(start_col, end_col + 1))
 
-    start_row, end_row = row_range
-    start_col, end_col = col_range
+    names = None
+    consumed_rows = 0
+    if isinstance(header, list):
+        # Pandas supports header=[0, 1] as MultiIndex columns; Polars has no
+        # MultiIndex. So the header rows are read separately and combined
+        # into flat names.
+        consumed_rows = max(header) + 1
+        headings = pl.read_excel(
+            file,
+            sheet_name=sheet_name,
+            columns=usecols,
+            has_header=False,
+            drop_empty_rows=False,
+            drop_empty_cols=False,
+            read_options={"skip_rows": skiprows, "n_rows": consumed_rows},
+        )
+        rows = []
+        for i in header:
+            row = headings.row(i)
+            if i != header[-1]:
+                row = pl.Series(row).fill_null(strategy="forward").to_list()
+            rows.append(row)
+        names = [
+            "_".join(str(v) for v in values if v is not None)
+            for values in zip(*rows)
+        ]
+        header = None
+    elif header is not None:
+        consumed_rows = header + 1
 
-    skiprows = start_row - 1
-    nrows = end_row - start_row + 1
-    usecols = list(range(start_col, end_col + 1))
-
-    df = pd.read_excel(
+    df = pl.read_excel(
         file,
         sheet_name=sheet_name,
-        skiprows=skiprows,
-        nrows=nrows,
-        usecols=usecols,
-        header=header,
+        columns=usecols,
+        has_header=header is not None,
+        drop_empty_rows=False,
+        drop_empty_cols=False,
+        infer_schema_length=None,
+        read_options={
+            "header_row": skiprows + header if header is not None else None,
+            "skip_rows": 0 if header is not None else skiprows + consumed_rows,
+            "n_rows": nrows - consumed_rows if nrows is not None else None,
+        },
     )
+    if names is not None or header is None:
+        df.columns = names or [str(i) for i in range(df.width)]
     return df
 
 
