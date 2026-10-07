@@ -430,6 +430,38 @@ class Connections:
             pl.col(self._node_internal_index_col).is_in(node_indexes)
         )
 
+    def edge_info_filter_options(self) -> dict[str, list]:
+        """Return values available for filtering edge information."""
+        if self.edge_info is None:
+            return {}
+
+        return {
+            column: self.edge_info[column]
+            .unique(maintain_order=True)
+            .to_list()
+            for column in self.edge_info.columns
+        }
+
+    def edge_info_filter(
+        self,
+        filters: dict[str, Any],
+    ) -> pl.DataFrame | None:
+        """Return edge information matching the given filters.
+
+        Args:
+            filters:
+                Mapping of column names to values to filter by.
+
+        Returns:
+            Filtered edge information, or `None` if `.edge_info` is None.
+        """
+        if self.edge_info is None:
+            warnings.warn(
+                "No edge information available to filter.", UserWarning
+            )
+            return None
+        return self.edge_info.filter(**filters)
+
     def _get_unique_node_index(self, node_id: dict[str, str | int]) -> int:
         """Return the internal index for a node.
 
