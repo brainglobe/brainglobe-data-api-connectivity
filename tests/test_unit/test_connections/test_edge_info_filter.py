@@ -137,3 +137,41 @@ def test_edge_info_filter_no_edge_info(mini_G) -> None:
         filtered_edge_info = mini_G.edge_info_filter({"used": "yes"})
 
     assert filtered_edge_info is None
+
+
+@pytest.mark.parametrize(
+    ("filters", "columns", "message"),
+    [
+        pytest.param(
+            {"not_a_column": "yes"},
+            None,
+            r"Unknown columns: \['not_a_column'\]\. Available columns:",
+            id="invalid filter name (= column name)",
+        ),
+        pytest.param(
+            {"used": "maybe"},
+            None,
+            r"Unknown filter value 'maybe' for column 'used'\. "
+            r"Available values: \['yes', 'no'\]",
+            id="invalid filter value",
+        ),
+        pytest.param(
+            None,
+            ["not_a_column"],
+            r"Unknown columns: \['not_a_column'\]\. Available columns:",
+            id="invalid column name",
+        ),
+        pytest.param(
+            None,
+            [0],
+            r"Unknown columns: \[0\]\. Available columns:",
+            id="Column index (invalid)",
+        ),
+    ],
+)
+def test_edge_info_filter_invalid_inputs(
+    mini_G, filters, columns, message
+) -> None:
+    """Invalid filters and columns raise helpful errors."""
+    with pytest.raises(ValueError, match=message):
+        mini_G.edge_info_filter(filters=filters, columns=columns)
