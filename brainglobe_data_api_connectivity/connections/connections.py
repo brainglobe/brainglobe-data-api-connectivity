@@ -593,6 +593,7 @@ class Connections:
             for node in [node0, node1]
         ]
 
+        # assert to narrow down edge_info type for mypy
         assert self.edge_info is not None
 
         from_col = pl.col(self.edge_info_from_col)
