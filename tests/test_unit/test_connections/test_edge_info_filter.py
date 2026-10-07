@@ -1,4 +1,6 @@
+import polars as pl
 import pytest
+from polars.testing import assert_frame_equal
 
 
 def test_edge_info_filter_options(mini_G) -> None:
@@ -69,6 +71,53 @@ def test_edge_info_filter(
     filtered_edge_info = mini_G.edge_info_filter(filters)
 
     assert filtered_edge_info.shape[0] == expected_n_rows
+
+
+@pytest.mark.parametrize(
+    ("filters", "columns", "expected"),
+    [
+        pytest.param(
+            None,
+            ["to_id", "from_id"],
+            pl.DataFrame(
+                {
+                    "to_id": ["B", "C", "C", "C", "D"],
+                    "from_id": ["A", "B", "A", "A", "C"],
+                }
+            ),
+            id="columns only",
+        ),
+        pytest.param(
+            {"strength": "medium (1.0)"},
+            ["from_id", "to_id", "used"],
+            pl.DataFrame(
+                {
+                    "from_id": ["B", "A"],
+                    "to_id": ["C", "C"],
+                    "used": ["yes", "no"],
+                }
+            ),
+            id="filter on omitted column",
+        ),
+        pytest.param(
+            {"paper": "author et al., 2020", "used": "yes"},
+            ["from_id", "to_id", "strength"],
+            pl.DataFrame(
+                {
+                    "from_id": ["C"],
+                    "to_id": ["D"],
+                    "strength": ["strong (10.0)"],
+                }
+            ),
+            id="multiple filters and columns",
+        ),
+    ],
+)
+def test_edge_info_filter_columns(mini_G, filters, columns, expected) -> None:
+    """Return the expected rows and columns in the requested order."""
+    filtered_edge_info = mini_G.edge_info_filter(filters, columns=columns)
+
+    assert_frame_equal(filtered_edge_info, expected)
 
 
 def test_edge_info_filter_options_unavailable(mini_G) -> None:
