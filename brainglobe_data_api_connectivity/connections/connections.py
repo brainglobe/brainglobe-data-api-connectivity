@@ -524,6 +524,24 @@ class Connections:
 
         return connections_lookup
 
+    def _warn_ignored_edge_info_options(
+        self,
+        connections_lookup: ConnectionsLookup,
+        filters: dict[str, Any] | None,
+        columns: list[str] | None,
+    ) -> None:
+        """Warn if filtering options are ignored."""
+        if connections_lookup == ConnectionsLookup.NETWORK and (
+            filters is not None or columns is not None
+        ):
+            warnings.warn(
+                "You are using ConnectionsLookup.NETWORK, so filters and "
+                "columns are ignored. "
+                ""
+                "Use ConnectionsLookup.ALL to apply them.",
+                UserWarning,
+            )
+
     def direct_connections(
         self,
         node_internal_index: int,
@@ -694,6 +712,8 @@ class Connections:
         node1: int | dict[str, str | int],
         connections_lookup: ConnectionsLookup = ConnectionsLookup.NETWORK,
         node0_as: NodeIs = NodeIs.ANY,
+        filters: dict[str, Any] | None = None,
+        columns: list[str] | None = None,
     ) -> pl.DataFrame:
         """Report direct connections between two nodes.
 
@@ -709,20 +729,42 @@ class Connections:
                 Source from which to find connections.
             node0_as:
                 Role node0 should play in the connection.
+            filters:
+                Edge information values to match. Applied only with
+                `ConnectionsLookup.ALL`.
+            columns:
+                Columns to return after identifying connections and filtering
+                rows. Applied only with `ConnectionsLookup.ALL`.
 
         Returns:
             Matching connections (pl.DataFrame), empty if none exist.
+
+        Raises:
+            ValueError:
+                If supplied filters or columns are invalid.
+
+        Warns:
+            UserWarning
+                Supplied filters or columns are ignored if
+                `ConnectionsLookup.NETWORK` is used.
         """
         connections_lookup = self._get_available_connection_lookup(
             connections_lookup
         )
 
         if connections_lookup == ConnectionsLookup.ALL:
-            return self._direct_connection_from_edge_info(
+            connections = self._direct_connection_from_edge_info(
                 node0,
                 node1,
                 node0_as,
             )
+            return data_filter(connections, filters, columns)
+
+        self._warn_ignored_edge_info_options(
+            connections_lookup,
+            filters,
+            columns,
+        )
 
         return self._direct_connection_from_network(
             node0,
@@ -734,25 +776,51 @@ class Connections:
         self,
         node: int | dict[str, str | int],
         connections_lookup: ConnectionsLookup = ConnectionsLookup.NETWORK,
+        filters: dict[str, Any] | None = None,
+        columns: list[str] | None = None,
     ) -> pl.DataFrame:
         """Report all bidirectional connections of a node.
 
         A connection is considered bidirectional when an edge exists both from
         `node` to another node and from that node back to `node`.
 
+        Bidirectionality is determined before filters are applied. Filtering
+        can affect the returned rows, so after filtering a bidirectional
+        connection may be represented by only one direction in the result.
+
         Args:
             node:
                 Index (int) or node information (dict) identifying the node.
             connections_lookup:
                 Source from which to find connections.
-
+            filters:
+                Edge information values to match. Applied only with
+                `ConnectionsLookup.ALL`.
+            columns:
+                Columns to return after identifying connections and filtering
+                rows. Applied only with `ConnectionsLookup.ALL`.
         Returns:
             Matching bidirectional connections (pl.DataFrame), empty if none
             exist.
+
+        Raises:
+            ValueError:
+                If supplied filters or columns are invalid.
+
+        Warns:
+            UserWarning
+                Supplied filters or columns are ignored if
+                `ConnectionsLookup.NETWORK` is used.
         """
 
         connections_lookup = self._get_available_connection_lookup(
             connections_lookup
+        )
+
+        self._warn_ignored_edge_info_options(
+            connections_lookup,
+            filters,
+            columns,
         )
 
         node_idx = (
@@ -782,6 +850,11 @@ class Connections:
             connection_frames.append(connections)
 
         if not connection_frames:
+            if connections_lookup == ConnectionsLookup.ALL:
+                return data_filter(self.edge_info, filters, columns).head(0)
             return pl.DataFrame()
 
-        return pl.concat(connection_frames)
+        connections = pl.concat(connection_frames)
+        if connections_lookup == ConnectionsLookup.ALL:
+            return data_filter(connections, filters, columns)
+        return connections
