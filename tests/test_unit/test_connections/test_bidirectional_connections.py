@@ -56,14 +56,23 @@ def mini_G_bidi(nodes, bidi_edge_list, bidi_edge_info) -> Connections:
         B: 4  (B <-> A, B <-> C)
         C: 2  (C <-> B)
         D: 0
+        E: 0  (isolated)
 
     ALL (edge info):
         A: 2  (A <-> B)
         B: 5  (B <-> A, B <-> C; extra C -> B report)
         C: 5  (C <-> B, C <-> D; extra C -> B report)
         D: 2  (D <-> C)
+        E: 0  (isolated)
 
     """
+    nodes = nodes.vstack(
+        pl.DataFrame(
+            [("E", 4, "E", "E is isolated", 5)],
+            schema=nodes.schema,
+            orient="row",
+        )
+    )
     return Connections(nodes, bidi_edge_list, bidi_edge_info)
 
 
@@ -171,6 +180,14 @@ def mini_G_bidi(nodes, bidi_edge_list, bidi_edge_info) -> Connections:
             ["strength"],
             (0, 1),
             id="No matching filtered connections",
+        ),
+        pytest.param(
+            {"name": "E"},
+            ConnectionsLookup.ALL,
+            {"used": "yes"},
+            ["strength", "from_id"],
+            (0, 2),
+            id="No reciprocal pairs with filter and columns",
         ),
     ],
 )
