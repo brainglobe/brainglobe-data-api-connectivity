@@ -814,3 +814,17 @@ class Connections:
         common_connections = sorted(set.intersection(*connections))
 
         return common_connections
+
+    def common_connections_node_info(
+        self,
+        nodes: list[int],
+        node_as: NodeIs = NodeIs.ANY,
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+    ) -> pl.DataFrame:
+        """Return all node metadata for common directly connected nodes."""
+        common_indexes = self.common_connections(
+            nodes,
+            node_as=node_as,
+            connections_lookup=connections_lookup,
+        )
+        return self.node_information_from_index(common_indexes)

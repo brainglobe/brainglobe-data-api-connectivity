@@ -9,6 +9,55 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
 
 
 @pytest.mark.parametrize(
+    ("query_nodes", "node_as", "expected"),
+    [
+        pytest.param(
+            [0, 1],
+            NodeIs.ANY,
+            [
+                {
+                    "name": "C",
+                    "idx": 2,
+                    "group": "C",
+                    "notes": "C is part of group C",
+                    "custom_index": 3,
+                    "__node_index": 2,
+                }
+            ],
+            id="common connection",
+        ),
+        pytest.param(
+            [0, 1],
+            NodeIs.INPUT,
+            [
+                {
+                    "name": "C",
+                    "idx": 2,
+                    "group": "C",
+                    "notes": "C is part of group C",
+                    "custom_index": 3,
+                    "__node_index": 2,
+                }
+            ],
+            id="common output",
+        ),
+        pytest.param(
+            [0, 3],
+            NodeIs.OUTPUT,
+            [],
+            id="no common connections",
+        ),
+    ],
+)
+def test_common_connections_info(
+    mini_G, query_nodes, node_as, expected
+) -> None:
+    """Return node information for common connections."""
+    result = mini_G.common_connections_node_info(query_nodes, node_as=node_as)
+    assert result.to_dicts() == expected
+
+
+@pytest.mark.parametrize(
     ("node_indices", "node_as", "expected"),
     [
         pytest.param(
