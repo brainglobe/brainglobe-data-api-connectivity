@@ -109,7 +109,7 @@ def test_common_connections_edge_info(
 
 
 def test_common_connections_edge_info_all(mini_G) -> None:
-    """Return all metadata without repeating edges for repeated query nodes."""
+    """Return all metadata for queried nodes."""
     result = mini_G.common_connections_edge_info(
         [0, 1], connections_lookup=ConnectionsLookup.ALL
     )
