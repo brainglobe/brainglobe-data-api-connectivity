@@ -239,6 +239,26 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             (0, 2),
             id="A and C (no matching filtered connections)",
         ),
+        pytest.param(
+            0,
+            1,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            {"used": "no"},
+            ["paper"],
+            (0, 1),
+            id="Valid filter value absent from selected connections",
+        ),
+        pytest.param(
+            0,
+            3,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            {"used": "no"},
+            ["paper"],
+            (0, 1),
+            id="No connections with valid filter and columns",
+        ),
     ],
 )
 def test_direct_connection_between(
@@ -268,6 +288,11 @@ def test_direct_connection_between(
     ["options", "message"],
     [
         pytest.param(
+            {"filters": {"INVALID_COLUMN": "yes"}},
+            "Unknown columns",
+            id="Invalid filter name",
+        ),
+        pytest.param(
             {"filters": {"used": "INVALID_VALUE"}},
             "Unknown filter value",
             id="Invalid filter value",
@@ -284,13 +309,14 @@ def test_direct_connection_between(
         ),
     ],
 )
+@pytest.mark.parametrize("node1", [2, 3])
 def test_direct_connection_between_filter_column_warnings(
-    mini_G, options, message
+    mini_G, options, message, node1
 ):
     """Warn for ignored options and reject invalid metadata options."""
     with pytest.raises(ValueError, match=message):
         mini_G.direct_connection_between(
-            0, 2, connections_lookup=ConnectionsLookup.ALL, **options
+            0, node1, connections_lookup=ConnectionsLookup.ALL, **options
         )
 
 

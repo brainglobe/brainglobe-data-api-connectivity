@@ -39,18 +39,27 @@ def data_filter(
     data: pl.DataFrame,
     filters: dict[str, Any] | None = None,
     columns: list[str] | None = None,
+    validation_data: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
-    """Return rows matching filters, then select columns in requested order.
+    """Filter rows and select columns from a DataFrame.
 
-    By default, all rows and columns are preserved. Passing `None` for filters
-    and columns preserves all rows and columns respectively.
+    Filters and columns are validated against `validation_data` if provided,
+    otherwise against `data`. Invalid column names or filter values raise
+    `ValueError`.
 
-    Unknown column names or unavailable filter values raise `ValueError`.
+    A filter value of `None` matches null values. If no filters or columns
+    are specified, all rows or columns are preserved, respectively.
     """
+    validation_data = data if validation_data is None else validation_data
     if filters:
-        validate_filters(data, filters)
-        data = data.filter(**filters)
+        validate_filters(validation_data, filters)
+        data = data.filter(
+            pl.col(column).is_null()
+            if value is None
+            else pl.col(column) == value
+            for column, value in filters.items()
+        )
     if columns is not None:
-        validate_columns(data, columns)
+        validate_columns(validation_data, columns)
         data = data.select(columns)
     return data

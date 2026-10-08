@@ -442,6 +442,7 @@ class Connections:
         self,
         filters: dict[str, Any] | None = None,
         columns: list[str] | None = None,
+        data: pl.DataFrame | None = None,
     ) -> pl.DataFrame | None:
         """Return edge information matching the given filters.
 
@@ -452,6 +453,9 @@ class Connections:
             columns:
                 Columns to return, in the requested order. If omitted,
                 return all columns.
+            data:
+                Rows to filter, defaulting to `.edge_info`. Filters and columns
+                are always validated against the full `.edge_info`.
 
         Returns:
             Filtered edge information, or `None` if `.edge_info` is None.
@@ -466,7 +470,12 @@ class Connections:
                 "No edge information available to filter.", UserWarning
             )
             return None
-        return data_filter(self.edge_info, filters, columns)
+        return data_filter(
+            self.edge_info if data is None else data,
+            filters,
+            columns,
+            validation_data=self.edge_info,
+        )
 
     def _get_unique_node_index(self, node_id: dict[str, str | int]) -> int:
         """Return the internal index for a node.
@@ -758,7 +767,7 @@ class Connections:
                 node1,
                 node0_as,
             )
-            return data_filter(connections, filters, columns)
+            return self.edge_info_filter(filters, columns, data=connections)
 
         self._warn_ignored_edge_info_options(
             connections_lookup,
@@ -849,12 +858,14 @@ class Connections:
             )
             connection_frames.append(connections)
 
-        if not connection_frames:
-            if connections_lookup == ConnectionsLookup.ALL:
-                return data_filter(self.edge_info, filters, columns).head(0)
+        if connection_frames:
+            connections = pl.concat(connection_frames)
+        elif connections_lookup == ConnectionsLookup.ALL:
+            self.edge_info: pl.DataFrame
+            connections = self.edge_info.head(0)
+        else:
             return pl.DataFrame()
 
-        connections = pl.concat(connection_frames)
         if connections_lookup == ConnectionsLookup.ALL:
-            return data_filter(connections, filters, columns)
+            return self.edge_info_filter(filters, columns, data=connections)
         return connections

@@ -189,6 +189,22 @@ def mini_G_bidi(nodes, bidi_edge_list, bidi_edge_info) -> Connections:
             (0, 2),
             id="No reciprocal pairs with filter and columns",
         ),
+        pytest.param(
+            0,
+            ConnectionsLookup.ALL,
+            {"strength": "3"},
+            ["used"],
+            (0, 1),
+            id="Valid filter value only on nonreciprocal connections",
+        ),
+        pytest.param(
+            0,
+            ConnectionsLookup.ALL,
+            {"strength": "10"},
+            ["used"],
+            (0, 1),
+            id="Valid filter value only on other connections",
+        ),
     ],
 )
 def test_bidirectional_connections(
@@ -214,6 +230,11 @@ def test_bidirectional_connections(
     ["options", "message"],
     [
         pytest.param(
+            {"filters": {"INVALID_COLUMN": "yes"}},
+            "Unknown columns",
+            id="Invalid filter name",
+        ),
+        pytest.param(
             {"filters": {"used": "INVALID_VALUE"}},
             "Unknown filter value",
             id="Invalid filter value",
@@ -230,13 +251,14 @@ def test_bidirectional_connections(
         ),
     ],
 )
+@pytest.mark.parametrize("node", [1, 4])
 def test_bidirectional_connections_filter_column_errors(
-    mini_G_bidi, options, message
+    mini_G_bidi, options, message, node
 ):
     """Reject invalid filters or columns for edge information lookup."""
     with pytest.raises(ValueError, match=message):
         mini_G_bidi.bidirectional_connections(
-            1, connections_lookup=ConnectionsLookup.ALL, **options
+            node, connections_lookup=ConnectionsLookup.ALL, **options
         )
 
 

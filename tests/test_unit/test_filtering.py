@@ -71,6 +71,13 @@ def test_invalid_columns(data, columns):
             "Available values: ['x', 'y']",
             id="invalid filter value",
         ),
+        pytest.param(
+            {"name": None},
+            None,
+            "Unknown filter value None for column 'name'. "
+            "Available values: ['B', 'A']",
+            id="null filter (value absent from data)",
+        ),
     ],
 )
 def test_invalid_filter(data, filters, columns, message):
@@ -159,3 +166,20 @@ def test_data_filter(data, filters, columns, expected):
 
     assert_frame_equal(result, expected)
     assert_frame_equal(data, original)
+
+
+@pytest.mark.parametrize(
+    "filters",
+    [
+        pytest.param({"name": None}, id="null filter"),
+        pytest.param(
+            {"name": None, "group": "x"}, id="null and value filters"
+        ),
+    ],
+)
+def test_data_filter_null(filters):
+    """Null filters match null rows and combine with other filters."""
+    data = pl.DataFrame({"name": [None, "A"], "group": ["x", "y"]})
+    assert_frame_equal(
+        data_filter(data, filters, ["group"]), data.head(1).select("group")
+    )
