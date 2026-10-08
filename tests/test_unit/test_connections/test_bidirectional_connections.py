@@ -71,50 +71,106 @@ def mini_G_bidi(nodes, bidi_edge_list, bidi_edge_info) -> Connections:
     [
         "node",
         "connections_lookup",
-        "expected_rows",
+        "filters",
+        "columns",
+        "expected_shape",
     ],
     [
         pytest.param(
             {"name": "A"},
             ConnectionsLookup.ALL,
-            2,
+            None,
+            None,
+            (2, 8),
             id="A (all)",
         ),
         pytest.param(
             {"name": "A"},
             ConnectionsLookup.NETWORK,
-            2,
+            None,
+            None,
+            (2, 3),
             id="A (reported)",
         ),
         pytest.param(
             {"name": "B"},
             ConnectionsLookup.ALL,
-            5,
+            None,
+            None,
+            (5, 8),
             id="B (all)",
         ),
         pytest.param(
             1,
             ConnectionsLookup.ALL,
-            5,
+            None,
+            None,
+            (5, 8),
             id="B by index (all)",
         ),
         pytest.param(
             {"name": "B"},
             ConnectionsLookup.NETWORK,
-            4,
+            None,
+            None,
+            (4, 3),
             id="B (reported)",
         ),
         pytest.param(
             {"name": "D"},
             ConnectionsLookup.ALL,
-            2,
+            None,
+            None,
+            (2, 8),
             id="D (all)",
         ),
         pytest.param(
             {"name": "D"},
             ConnectionsLookup.NETWORK,
-            0,
+            None,
+            None,
+            (0, 0),
             id="D (reported)",
+        ),
+        pytest.param(
+            1,
+            ConnectionsLookup.ALL,
+            {"used": "yes"},
+            None,
+            (4, 8),
+            id="B filter (used)",
+        ),
+        pytest.param(
+            1,
+            ConnectionsLookup.ALL,
+            {"used": "no"},
+            None,
+            (1, 8),
+            id="B filter (unused)",
+        ),
+        pytest.param(
+            1,
+            ConnectionsLookup.ALL,
+            None,
+            ["from_id", "to_id"],
+            (5, 2),
+            id="B (two columns)",
+        ),
+        pytest.param(
+            1,
+            ConnectionsLookup.ALL,
+            {"strength": "5"},
+            ["from_id", "to_id"],
+            (1, 2),
+            id="B (filter and two columns)",
+        ),
+        pytest.param(
+            1,
+            ConnectionsLookup.ALL,
+            {"used": "no", "strength": "2"},
+            ["strength"],
+            (0, 1),
+            id="No matching filtered connections",
         ),
     ],
 )
@@ -122,15 +178,71 @@ def test_bidirectional_connections(
     mini_G_bidi,
     node,
     connections_lookup,
-    expected_rows,
+    filters,
+    columns,
+    expected_shape,
 ):
     """Test finding all bidirectional connections for a node."""
     connections = mini_G_bidi.bidirectional_connections(
         node,
         connections_lookup=connections_lookup,
+        filters=filters,
+        columns=columns,
     )
 
-    assert connections.shape[0] == expected_rows
+    assert connections.shape == expected_shape
+
+
+@pytest.mark.parametrize(
+    ["options", "message"],
+    [
+        pytest.param(
+            {"filters": {"used": "INVALID_VALUE"}},
+            "Unknown filter value",
+            id="Invalid filter value",
+        ),
+        pytest.param(
+            {"columns": ["INVALID_COLUMN"]},
+            "Unknown columns",
+            id="Invalid column",
+        ),
+        pytest.param(
+            {"columns": [0]},
+            "Unknown columns",
+            id="Invalid column (int index)",
+        ),
+    ],
+)
+def test_bidirectional_connections_filter_column_errors(
+    mini_G_bidi, options, message
+):
+    """Reject invalid filters or columns for edge information lookup."""
+    with pytest.raises(ValueError, match=message):
+        mini_G_bidi.bidirectional_connections(
+            1, connections_lookup=ConnectionsLookup.ALL, **options
+        )
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        pytest.param(
+            {"filters": {"used": "yes"}}, id="Valid filter (NETWORK)"
+        ),
+        pytest.param(
+            {
+                "filters": {"used": "no", "strength": "1"},
+                "columns": ["from_id", "to_id"],
+            },
+            id="Valid multiple filters and columns (NETWORK)",
+        ),
+        pytest.param({"columns": ["strength"]}, id="Valid column (NETWORK)"),
+    ],
+)
+def test_bidirectional_connections_filters_ignored(mini_G_bidi, options):
+    """Warn when valid filters or columns are ignored for network lookup."""
+    with pytest.warns(UserWarning, match="filters and columns are ignored"):
+        mini_G_bidi.bidirectional_connections(1, **options)
 
 
 def test_bidirectional_connections_no_edge_info(mini_G_bidi):
@@ -147,4 +259,4 @@ def test_bidirectional_connections_no_edge_info(mini_G_bidi):
             connections_lookup=ConnectionsLookup.ALL,
         )
 
-    assert connections.shape[0] == 4
+    assert connections.shape == (4, 3)
