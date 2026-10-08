@@ -264,6 +264,58 @@ def test_direct_connection_between(
     assert connections.shape == expected_shape
 
 
+@pytest.mark.parametrize(
+    ["options", "message"],
+    [
+        pytest.param(
+            {"filters": {"used": "INVALID_VALUE"}},
+            "Unknown filter value",
+            id="Invalid filter value",
+        ),
+        pytest.param(
+            {"columns": ["INVALID_COLUMN"]},
+            "Unknown columns",
+            id="Invalid column",
+        ),
+        pytest.param(
+            {"columns": [0]},
+            "Unknown columns",
+            id="Invalid column (int index)",
+        ),
+    ],
+)
+def test_direct_connection_between_filter_column_warnings(
+    mini_G, options, message
+):
+    """Warn for ignored options and reject invalid metadata options."""
+    with pytest.raises(ValueError, match=message):
+        mini_G.direct_connection_between(
+            0, 2, connections_lookup=ConnectionsLookup.ALL, **options
+        )
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        pytest.param(
+            {"filters": {"used": "yes"}}, id="Valid filter (NETWORK)"
+        ),
+        pytest.param(
+            {
+                "filters": {"used": "no", "strength": "medium (1.0)"},
+                "columns": ["paper", "strength"],
+            },
+            id="Valid multiple filters and columns (NETWORK)",
+        ),
+        pytest.param({"columns": ["paper"]}, id="Valid column (NETWORK)"),
+    ],
+)
+def test_direct_connection_filters_ignored(mini_G, options):
+    """Warn when valid filters or columns are ignored for network lookup."""
+    with pytest.warns(UserWarning, match="filters and columns are ignored"):
+        mini_G.direct_connection_between(0, 2, **options)
+
+
 def test_direct_connection_between_no_edge_info(mini_G):
     """Test graph fallback when edge information is unavailable."""
     mini_G.edge_info = None
