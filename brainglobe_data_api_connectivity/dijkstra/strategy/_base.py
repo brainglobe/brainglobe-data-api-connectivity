@@ -1,11 +1,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Generic, TypeVar
-
-Cost = TypeVar("Cost")
 
 
-class DijkstraStrategy(ABC, Generic[Cost]):
+class DijkstraStrategy[Cost](ABC):
     """"""
 
     weight_fn: Callable[[float], float]
