@@ -1,3 +1,4 @@
-from typing import Any, Collection, TypeAlias
+from collections.abc import Collection
+from typing import Any
 
-EdgeTable: TypeAlias = Collection[tuple[int, int, Any]]
+type EdgeTable = Collection[tuple[int, int, Any]]
