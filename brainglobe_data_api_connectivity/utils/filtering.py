@@ -1,3 +1,4 @@
+from math import isnan
 from typing import Any, Iterable
 
 import polars as pl
@@ -28,7 +29,14 @@ def validate_filters(data: pl.DataFrame, filters: dict[str, Any]) -> None:
     validate_columns(data, filters)
     for column, value in filters.items():
         available_values = data[column].unique(maintain_order=True).to_list()
-        if value not in available_values:
+        if value not in available_values and not (
+            isinstance(value, float)
+            and isnan(value)
+            and any(
+                isinstance(option, float) and isnan(option)
+                for option in available_values
+            )
+        ):
             raise ValueError(
                 f"Unknown filter value {value!r} for column {column!r}. "
                 f"Available values: {available_values}"

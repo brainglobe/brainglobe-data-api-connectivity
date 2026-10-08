@@ -1,3 +1,5 @@
+from math import isnan
+
 import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
@@ -13,12 +15,22 @@ from brainglobe_data_api_connectivity.utils.filtering import (
 @pytest.fixture
 def data() -> pl.DataFrame:
     """Simple data unrelated to graph connections."""
-    return pl.DataFrame({"name": ["B", "A", "B"], "group": ["x", "y", "x"]})
+    return pl.DataFrame(
+        {
+            "name": ["B", "A", "B"],
+            "group": ["x", "y", "x"],
+            "weight": [float("nan"), 1.0, None],
+        }
+    )
 
 
 def test_filter_options(data):
     """Test filter_options gives unique options sorted in ascending order."""
-    assert filter_options(data) == {"name": ["A", "B"], "group": ["x", "y"]}
+    options = filter_options(data)
+    weights = options.pop("weight")
+    assert options == {"name": ["A", "B"], "group": ["x", "y"]}
+    assert weights[:2] == [None, 1.0]
+    assert isnan(weights[2])
 
 
 @pytest.mark.parametrize(
@@ -30,6 +42,12 @@ def test_filter_options(data):
             validate_filters, {"name": "A", "group": "y"}, id="valid filters"
         ),
         pytest.param(validate_filters, {}, id="empty filters"),
+        pytest.param(
+            validate_filters, {"weight": float("nan")}, id="valid NaN filter"
+        ),
+        pytest.param(
+            validate_filters, {"weight": None}, id="valid null filter"
+        ),
     ],
 )
 def test_valid_columns_and_filters(data, validator, values):
@@ -50,7 +68,8 @@ def test_invalid_columns(data, columns):
         validate_columns(data, columns)
 
     assert str(exc_info.value) == (
-        f"Unknown columns: {columns}. Available columns: ['name', 'group']"
+        f"Unknown columns: {columns}. "
+        "Available columns: ['name', 'group', 'weight']"
     )
 
 
@@ -61,7 +80,7 @@ def test_invalid_columns(data, columns):
             None,
             ["missing"],
             "Unknown columns: ['missing']. "
-            "Available columns: ['name', 'group']",
+            "Available columns: ['name', 'group', 'weight']",
             id="invalid selected column",
         ),
         pytest.param(
@@ -94,7 +113,7 @@ def test_invalid_filter(data, filters, columns, message):
         pytest.param(
             {"missing": "x"},
             "Unknown columns: ['missing']. "
-            "Available columns: ['name', 'group']",
+            "Available columns: ['name', 'group', 'weight']",
             id="invalid filter name (column)",
         ),
         pytest.param(
@@ -102,6 +121,12 @@ def test_invalid_filter(data, filters, columns, message):
             "Unknown filter value 'missing' for column 'group'. "
             "Available values: ['x', 'y']",
             id="invalid filter value",
+        ),
+        pytest.param(
+            {"name": float("nan")},
+            "Unknown filter value nan for column 'name'. "
+            "Available values: ['B', 'A']",
+            id="NaN filter value absent from data",
         ),
     ],
 )
@@ -123,19 +148,31 @@ def test_validate_filters_invalid(data, filters, message):
         pytest.param(
             None,
             None,
-            pl.DataFrame({"name": ["B", "A", "B"], "group": ["x", "y", "x"]}),
+            pl.DataFrame(
+                {
+                    "name": ["B", "A", "B"],
+                    "group": ["x", "y", "x"],
+                    "weight": [float("nan"), 1.0, None],
+                }
+            ),
             id="None (full data returned)",
         ),
         pytest.param(
             {},
             None,
-            pl.DataFrame({"name": ["B", "A", "B"], "group": ["x", "y", "x"]}),
+            pl.DataFrame(
+                {
+                    "name": ["B", "A", "B"],
+                    "group": ["x", "y", "x"],
+                    "weight": [float("nan"), 1.0, None],
+                }
+            ),
             id="empty filter (full data returned)",
         ),
         pytest.param(
             {"name": "A"},
             None,
-            pl.DataFrame({"name": ["A"], "group": ["y"]}),
+            pl.DataFrame({"name": ["A"], "group": ["y"], "weight": [1.0]}),
             id="filter (A) only",
         ),
         pytest.param(
@@ -156,6 +193,24 @@ def test_validate_filters_invalid(data, filters, message):
             pl.DataFrame(schema={"name": pl.String}),
             id="valid filters with no matching combination",
         ),
+        pytest.param(
+            {"weight": float("nan")},
+            ["group"],
+            pl.DataFrame({"group": ["x"]}),
+            id="NaN filter",
+        ),
+        pytest.param(
+            {"weight": float("nan"), "group": "y"},
+            ["group"],
+            pl.DataFrame(schema={"group": pl.String}),
+            id="NaN filter with no matching combination",
+        ),
+        pytest.param(
+            {"weight": None},
+            ["group"],
+            pl.DataFrame({"group": ["x"]}),
+            id="null filter",
+        ),
     ],
 )
 def test_data_filter(data, filters, columns, expected):
@@ -166,20 +221,3 @@ def test_data_filter(data, filters, columns, expected):
 
     assert_frame_equal(result, expected)
     assert_frame_equal(data, original)
-
-
-@pytest.mark.parametrize(
-    "filters",
-    [
-        pytest.param({"name": None}, id="null filter"),
-        pytest.param(
-            {"name": None, "group": "x"}, id="null and value filters"
-        ),
-    ],
-)
-def test_data_filter_null(filters):
-    """Null filters match null rows and combine with other filters."""
-    data = pl.DataFrame({"name": [None, "A"], "group": ["x", "y"]})
-    assert_frame_equal(
-        data_filter(data, filters, ["group"]), data.head(1).select("group")
-    )
