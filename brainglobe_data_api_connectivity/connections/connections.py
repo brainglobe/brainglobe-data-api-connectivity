@@ -443,7 +443,7 @@ class Connections:
         filters: dict[str, Any] | None = None,
         columns: list[str] | None = None,
         data: pl.DataFrame | None = None,
-    ) -> pl.DataFrame | None:
+    ) -> pl.DataFrame:
         """Return edge information matching the given filters.
 
         Args:
@@ -458,7 +458,8 @@ class Connections:
                 are always validated against the full `.edge_info`.
 
         Returns:
-            Filtered edge information, or `None` if `.edge_info` is None.
+            Filtered edge information, or an empty DataFrame with no columns
+            if `.edge_info` is None (with a warning).
 
         Raises:
             ValueError:
@@ -469,7 +470,7 @@ class Connections:
             warnings.warn(
                 "No edge information available to filter.", UserWarning
             )
-            return None
+            return pl.DataFrame()
         return data_filter(
             self.edge_info if data is None else data,
             filters,

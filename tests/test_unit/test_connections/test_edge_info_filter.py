@@ -127,7 +127,7 @@ def test_edge_info_filter_options_unavailable(mini_G) -> None:
 
 
 def test_edge_info_filter_no_edge_info(mini_G) -> None:
-    """Warn and return None when edge information is unavailable."""
+    """Warn and return an empty DataFrame when metadata is unavailable."""
     mini_G.edge_info = None
 
     with pytest.warns(
@@ -136,7 +136,7 @@ def test_edge_info_filter_no_edge_info(mini_G) -> None:
     ):
         filtered_edge_info = mini_G.edge_info_filter({"used": "yes"})
 
-    assert filtered_edge_info is None
+    assert_frame_equal(filtered_edge_info, pl.DataFrame())
 
 
 @pytest.mark.parametrize(
