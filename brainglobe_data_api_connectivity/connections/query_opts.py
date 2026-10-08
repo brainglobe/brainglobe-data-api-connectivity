@@ -6,7 +6,7 @@ class NodeIs(StrEnum):
     Options for node roles in a connection.
 
     At a glance:
-    - EITHER : Report all connections involving a node.
+    - ANY : Report all connections involving a node.
     - INPUT : Report only connections that have a node as the input / source.
     - OUTPUT : Report only connections that have a node as the output / target.
 

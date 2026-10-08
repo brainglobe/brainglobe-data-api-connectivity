@@ -30,6 +30,26 @@ from brainglobe_data_api_connectivity.utils.convert import (
             id="3x3 matrix with 4 edges + region_ids",
         ),
         pytest.param(
+            pd.DataFrame(
+                [
+                    [0, 1, 0],
+                    [0, 0, 2],
+                    [3, 4, 0],
+                ]
+            ),
+            False,
+            pd.Series([0, 1, 2]),
+            pd.DataFrame(
+                [
+                    [0, 1, 1],
+                    [1, 2, 2],
+                    [2, 0, 3],
+                    [2, 1, 4],
+                ]
+            ),
+            id="3x3 matrix with 4 edges + internal node indices",
+        ),
+        pytest.param(
             pd.DataFrame([[0, 0], [0, 0]]),
             False,
             None,
