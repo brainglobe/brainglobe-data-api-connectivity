@@ -828,3 +828,35 @@ class Connections:
             connections_lookup=connections_lookup,
         )
         return self.node_information_from_index(common_indexes)
+
+    def common_connections_edge_info(
+        self,
+        nodes: list[int],
+        node_as: NodeIs = NodeIs.ANY,
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+    ) -> pl.DataFrame:
+        """Return edge information for common directly connected nodes."""
+        connections_lookup = self._get_available_connection_lookup(
+            connections_lookup
+        )
+        common_indexes = self.common_connections(
+            nodes,
+            node_as=node_as,
+            connections_lookup=connections_lookup,
+        )
+        connection_frames = [
+            self.direct_connection_between(
+                node,
+                common_index,
+                connections_lookup=connections_lookup,
+                node0_as=node_as,
+            )
+            for node in nodes
+            for common_index in common_indexes
+        ]
+        if not connection_frames:
+            return pl.DataFrame()
+
+        return pl.concat(connection_frames, how="vertical_relaxed").unique(
+            maintain_order=True
+        )

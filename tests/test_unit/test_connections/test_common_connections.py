@@ -1,5 +1,6 @@
 import polars as pl
 import pytest
+from polars.testing import assert_frame_equal
 
 from brainglobe_data_api_connectivity.connections import Connections
 from brainglobe_data_api_connectivity.connections.query_opts import (
@@ -55,6 +56,81 @@ def test_common_connections_info(
     """Return node information for common connections."""
     result = mini_G.common_connections_node_info(query_nodes, node_as=node_as)
     assert result.to_dicts() == expected
+
+
+@pytest.mark.parametrize(
+    ("query_nodes", "node_as", "expected_edges"),
+    [
+        pytest.param(
+            [0, 1],
+            NodeIs.INPUT,
+            [
+                {"from": 0, "to": 2, "value": 10.0},
+                {"from": 1, "to": 2, "value": 1.0},
+            ],
+            id="common output edges",
+        ),
+        pytest.param(
+            [1, 2],
+            NodeIs.OUTPUT,
+            [
+                {"from": 0, "to": 1, "value": 0.1},
+                {"from": 0, "to": 2, "value": 10.0},
+            ],
+            id="common input edges",
+        ),
+        pytest.param(
+            [0, 3],
+            NodeIs.ANY,
+            [
+                {"from": 0, "to": 2, "value": 10},
+                {"from": 2, "to": 3, "value": 10},
+            ],
+            id="common edges in mixed directions",
+        ),
+        pytest.param(
+            [0, 3],
+            NodeIs.INPUT,
+            [],
+            id="no common connections",
+        ),
+    ],
+)
+def test_common_connections_edge_info(
+    mini_G, query_nodes, node_as, expected_edges
+) -> None:
+    """Return matching edge information with the requested direction."""
+    result = mini_G.common_connections_edge_info(
+        query_nodes,
+        node_as=node_as,
+    )
+    expected = pl.DataFrame(expected_edges)
+    assert_frame_equal(result, expected, check_row_order=False)
+
+
+def test_common_connections_edge_info_all(mini_G) -> None:
+    """Return all metadata without repeating edges for repeated query nodes."""
+    result = mini_G.common_connections_edge_info(
+        [0, 1], connections_lookup=ConnectionsLookup.ALL
+    )
+    # Nodes 0 and 1 share node 2. Keep every metadata row for these edges.
+    expected = mini_G.edge_info.filter(
+        pl.col("from").is_in([0, 1]) & (pl.col("to") == 2)
+    )
+    assert_frame_equal(result, expected, check_row_order=False)
+
+
+def test_common_connections_edge_info_no_edge_info(mini_G) -> None:
+    """Fall back to graph edges when edge metadata is unavailable."""
+    mini_G.edge_info = None
+    with pytest.warns(UserWarning, match="No edge information available"):
+        result = mini_G.common_connections_edge_info(
+            [0, 1], connections_lookup=ConnectionsLookup.ALL
+        )
+    expected = pl.DataFrame(
+        {"from": [0, 1], "to": [2, 2], "value": [10.0, 1.0]}
+    )
+    assert_frame_equal(result, expected)
 
 
 @pytest.mark.parametrize(
