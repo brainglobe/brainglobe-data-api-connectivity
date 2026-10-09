@@ -3,16 +3,19 @@ import pytest
 from polars.testing import assert_frame_equal
 
 from brainglobe_data_api_connectivity.connections.query_opts import (
+    ConnectionsLookup,
     NodeIs,
 )
 
 
 @pytest.mark.parametrize(
-    ("node", "node_as", "expected"),
+    ("node", "node_as", "connections_lookup", "return_edges", "expected"),
     [
         pytest.param(
             1,
             NodeIs.INPUT,
+            ConnectionsLookup.REPORTED,
+            False,
             pl.DataFrame(
                 {
                     "name": ["C"],
@@ -24,11 +27,33 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                     "node_as": ["input"],
                 }
             ),
-            id="index input",
+            id="index input nodes",
+        ),
+        pytest.param(
+            1,
+            NodeIs.INPUT,
+            ConnectionsLookup.ALL,
+            True,
+            pl.DataFrame(
+                {
+                    "from_id": ["B"],
+                    "to_id": ["C"],
+                    "from": [1],
+                    "to": [2],
+                    "used": ["yes"],
+                    "paper": ["author et al., 2025"],
+                    "strength": ["medium (1.0)"],
+                    "__idx_from": [1],
+                    "__idx_to": [2],
+                }
+            ),
+            id="index input all edges",
         ),
         pytest.param(
             {"name": "B"},
             NodeIs.OUTPUT,
+            ConnectionsLookup.ALL,
+            False,
             pl.DataFrame(
                 {
                     "name": ["A"],
@@ -40,11 +65,21 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                     "node_as": ["output"],
                 }
             ),
-            id="name output",
+            id="name output nodes",
+        ),
+        pytest.param(
+            {"name": "B"},
+            NodeIs.OUTPUT,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame({"from": [0], "to": [1], "value": [0.1]}),
+            id="name output reported edges",
         ),
         pytest.param(
             {"name": "B", "group": "AB"},
             NodeIs.ANY,
+            ConnectionsLookup.REPORTED,
+            False,
             pl.DataFrame(
                 {
                     "name": ["C", "A"],
@@ -56,14 +91,49 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                     "node_as": ["input", "output"],
                 }
             ),
-            id="name and group both any",
+            id="name and group both any nodes",
+        ),
+        pytest.param(
+            {"name": "B", "group": "AB"},
+            NodeIs.ANY,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame({"from": [1, 0], "to": [2, 1], "value": [1.0, 0.1]}),
+            id="name and group both any reported edges",
+        ),
+        pytest.param(
+            {"name": "B", "group": "AB"},
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            True,
+            pl.DataFrame(
+                {
+                    "from_id": ["B", "A"],
+                    "to_id": ["C", "B"],
+                    "from": [1, 0],
+                    "to": [2, 1],
+                    "used": ["yes", "yes"],
+                    "paper": ["author et al., 2025", "author et al., 1998"],
+                    "strength": ["medium (1.0)", "weak (0.1)"],
+                    "__idx_from": [1, 0],
+                    "__idx_to": [2, 1],
+                }
+            ),
+            id="name and group both any all edges",
         ),
     ],
 )
-def test_direct_connection_info(mini_G, node, node_as, expected) -> None:
-    """Return ordered node metadata and roles for the queried node."""
-    result = mini_G.direct_connection_info(node, node_as)
-    assert_frame_equal(result, expected)
+def test_direct_connection_info(
+    mini_G, node, node_as, connections_lookup, return_edges, expected
+) -> None:
+    """Return node or edge information from the requested lookup source."""
+    result = mini_G.direct_connection_info(
+        node,
+        node_as,
+        connections_lookup=connections_lookup,
+        return_edges=return_edges,
+    )
+    assert_frame_equal(result, expected, check_row_order=not return_edges)
 
 
 @pytest.mark.parametrize(
