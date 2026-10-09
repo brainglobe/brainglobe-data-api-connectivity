@@ -13,7 +13,7 @@ from brainglobe_data_api_connectivity.dijkstra import strongest_average_path
             2,
             [0, 1, 2],
             7.0,
-            id="docstring example",
+            id="strongest indirect route",
         ),
         pytest.param(
             [(0, 1, 4), (1, 2, 4), (0, 2, 5)],
@@ -21,7 +21,7 @@ from brainglobe_data_api_connectivity.dijkstra import strongest_average_path
             2,
             [0, 2],
             5.0,
-            id="highest average, not total",
+            id="strongest direct route",
         ),
         pytest.param(
             [(0, 2, 10), (0, 1, 9), (1, 2, 9), (2, 3, 1)],
@@ -29,7 +29,7 @@ from brainglobe_data_api_connectivity.dijkstra import strongest_average_path
             3,
             [0, 1, 2, 3],
             19 / 3,
-            id="weaker prefix wins",
+            id="best complete route",
         ),
         pytest.param(
             [(0, 1, 2), (1, 2, 100), (2, 1, 100), (1, 3, 2)],
@@ -69,6 +69,7 @@ from brainglobe_data_api_connectivity.dijkstra import strongest_average_path
 def test_strongest_average_path(
     edges, source, target, expected_path, expected_average, max_steps
 ) -> None:
+    """Test that the route with the highest average edge weight is returned."""
     network = PyDiGraph(multigraph=False)
     network.add_nodes_from(range(4))
     network.add_edges_from(edges)
@@ -82,6 +83,7 @@ def test_strongest_average_path(
 
 
 def test_strongest_average_path_unknown_region() -> None:
+    """Test that a target node not present in the network raises ValueError."""
     network = PyDiGraph()
     network.add_nodes_from(range(4))
 
@@ -101,7 +103,12 @@ def test_strongest_average_path_unknown_region() -> None:
 def test_strongest_average_path_max_steps(
     max_steps, expected_path, expected_average
 ) -> None:
-    """Check that max_steps limits the number of edges."""
+    """Test that max_steps limits how many edges a route may contain.
+
+    Paths from (0) to (3) in example network:
+        (0) ──  5 ──> (1) ──  5 ──> (3)
+        (0) ── 10 ──> (2) ── 10 ──> (3)
+    """
     network = PyDiGraph(multigraph=False)
     network.add_nodes_from(range(4))
     network.add_edges_from([(0, 1, 5), (1, 3, 5), (0, 2, 10), (2, 3, 10)])
@@ -113,6 +120,7 @@ def test_strongest_average_path_max_steps(
 
 
 def test_strongest_average_path_negative_max_steps() -> None:
+    """Test that a negative maximum number of steps raises ValueError."""
     network = PyDiGraph()
     network.add_nodes_from(range(2))
 
