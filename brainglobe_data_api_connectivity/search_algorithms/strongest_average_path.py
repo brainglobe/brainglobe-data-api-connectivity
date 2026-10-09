@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 from rustworkx import PyDiGraph
 
 
@@ -5,7 +7,7 @@ def strongest_average_path(
     network: PyDiGraph,
     source: int,
     target: int,
-    max_steps: int = 5,
+    max_steps: int | None = 5,
 ) -> tuple[list[int] | None, float]:
     """Find the route with the highest average connection strength.
 
@@ -137,7 +139,7 @@ def strongest_average_path(
 
         # With one step left, only the target can be reached.
         if max_steps is not None and steps == max_steps - 1:
-            successors = (
+            successors: Iterable[int] = (
                 [target] if network.has_edge(current_region, target) else []
             )
         else:
