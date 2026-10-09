@@ -579,6 +579,98 @@ class Connections:
 
         return connections_as_input, connections_as_output
 
+    def direct_connection_info(
+        self,
+        node: int | dict[str, str | int],
+        node_as: NodeIs = NodeIs.ANY,
+        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+        return_edges: bool = False,
+    ) -> pl.DataFrame:
+        """Get node or edge information for the direct connections of a node.
+
+        Accepts an internal node index or metadata identifying a unique node.
+        Both output modes use the requested connection lookup source.
+
+        Args:
+            node: int | dict[str, str | int]
+                Internal index or node metadata identifying the queried node.
+            node_as: NodeIs
+                Role of the queried node: input, output, or either.
+            connections_lookup: ConnectionsLookup
+                Source from which to find connections. ALL uses edge metadata,
+                warning and falling back to the network if unavailable.
+            return_edges: bool
+                If True, return edge information instead of node information.
+
+        Returns:
+            pl.DataFrame
+                By default, all connected node metadata, including internal
+                indices, and `node_as` labelled "input" or "output" for the
+                queried node. Input connections precede output connections,
+                and each group follows node metadata order.
+                With `return_edges=True`, the existing
+                `direct_connection_between` format: source/target indices and
+                weights for REPORTED, or all edge metadata for ALL.
+                Empty node results retain their columns; empty edge results
+                retain the metadata schema for ALL, or have no columns for
+                REPORTED.
+
+        Raises:
+            ValueError:
+                If a metadata dictionary does not identify exactly one node.
+        """
+        connections_lookup = self._get_available_connection_lookup(
+            connections_lookup
+        )
+        node_idx = (
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+        )
+
+        directs = self.direct_connections(
+            node_internal_index=node_idx,
+            node_as=node_as,
+            connections_lookup=connections_lookup,
+        )
+
+        if return_edges:
+            edge_frames = [
+                self.direct_connection_between(
+                    node_idx,
+                    other_index,
+                    connections_lookup=connections_lookup,
+                    node0_as=role,
+                )
+                for node_list, role in zip(
+                    directs, [NodeIs.INPUT, NodeIs.OUTPUT], strict=True
+                )
+                for other_index in node_list
+                if not (
+                    other_index == node_idx
+                    and role == NodeIs.OUTPUT
+                    and node_as == NodeIs.ANY
+                )
+            ]
+            if not edge_frames:
+                return (
+                    self.edge_info.head(0)
+                    if connections_lookup == ConnectionsLookup.ALL
+                    and self.edge_info is not None
+                    else pl.DataFrame()
+                )
+            return pl.concat(edge_frames)
+
+        result_dfs = []
+        for node_list, source in zip(
+            directs, ["input", "output"], strict=True
+        ):
+            node_df = self.node_information_from_index(node_list)
+            node_df = node_df.with_columns(pl.lit(source).alias("node_as"))
+            result_dfs.append(node_df)
+
+        return pl.concat(result_dfs)
+
     def _direct_connection_from_edge_info(
         self,
         node0: int | dict[str, str | int],
@@ -596,8 +688,8 @@ class Connections:
             for node in [node0, node1]
         ]
 
-        from_col = pl.col(self.edge_info_from_col)
-        to_col = pl.col(self.edge_info_to_col)
+        from_col = pl.col(self._edge_info_from_index_col)
+        to_col = pl.col(self._edge_info_to_index_col)
 
         if node0_as == NodeIs.INPUT:
             connection_filter = (from_col == node0_idx) & (to_col == node1_idx)
