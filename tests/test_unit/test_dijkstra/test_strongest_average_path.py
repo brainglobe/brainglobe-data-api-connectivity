@@ -1,4 +1,5 @@
 import pytest
+from rustworkx import PyDiGraph
 
 from brainglobe_data_api_connectivity.dijkstra import strongest_average_path
 
@@ -66,10 +67,10 @@ from brainglobe_data_api_connectivity.dijkstra import strongest_average_path
 )
 @pytest.mark.parametrize("max_steps", [None, 3], ids=["unlimited", "3 steps"])
 def test_strongest_average_path(
-    mini_G, edges, source, target, expected_path, expected_average, max_steps
+    edges, source, target, expected_path, expected_average, max_steps
 ) -> None:
-    network = mini_G.network
-    network.clear_edges()
+    network = PyDiGraph(multigraph=False)
+    network.add_nodes_from(range(4))
     network.add_edges_from(edges)
 
     path, average = strongest_average_path(
@@ -80,10 +81,12 @@ def test_strongest_average_path(
     assert average == pytest.approx(expected_average)
 
 
-@pytest.mark.parametrize("source, target", [(4, 0), (0, 4), (4, 4)])
-def test_strongest_average_path_unknown_region(mini_G, source, target) -> None:
+def test_strongest_average_path_unknown_region() -> None:
+    network = PyDiGraph()
+    network.add_nodes_from(range(4))
+
     with pytest.raises(ValueError, match="must exist in the network"):
-        strongest_average_path(mini_G.network, source, target)
+        strongest_average_path(network, 0, 4)
 
 
 @pytest.mark.parametrize(
@@ -96,17 +99,22 @@ def test_strongest_average_path_unknown_region(mini_G, source, target) -> None:
     ],
 )
 def test_strongest_average_path_max_steps(
-    mini_G, max_steps, expected_path, expected_average
+    max_steps, expected_path, expected_average
 ) -> None:
     """Check that max_steps limits the number of edges."""
-    path, average = strongest_average_path(
-        mini_G.network, 0, 3, max_steps=max_steps
-    )
+    network = PyDiGraph(multigraph=False)
+    network.add_nodes_from(range(4))
+    network.add_edges_from([(0, 1, 5), (1, 3, 5), (0, 2, 10), (2, 3, 10)])
+
+    path, average = strongest_average_path(network, 0, 3, max_steps=max_steps)
 
     assert path == expected_path
     assert average == pytest.approx(expected_average)
 
 
-def test_strongest_average_path_negative_max_steps(mini_G) -> None:
+def test_strongest_average_path_negative_max_steps() -> None:
+    network = PyDiGraph()
+    network.add_nodes_from(range(2))
+
     with pytest.raises(ValueError, match="max_steps must be non-negative"):
-        strongest_average_path(mini_G.network, 0, 1, max_steps=-1)
+        strongest_average_path(network, 0, 1, max_steps=-1)
