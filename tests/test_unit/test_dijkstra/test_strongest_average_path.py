@@ -1,7 +1,9 @@
 import pytest
 from rustworkx import PyDiGraph
 
-from brainglobe_data_api_connectivity.dijkstra import strongest_average_path
+from brainglobe_data_api_connectivity.search_algorithms import (
+    strongest_average_path,
+)
 
 
 @pytest.mark.parametrize(
