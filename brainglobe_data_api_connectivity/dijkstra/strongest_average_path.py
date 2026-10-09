@@ -20,9 +20,7 @@ def strongest_average_path(
 
     All routes within `max_steps` are considered, ensuring an exact result.
     The default limit is 5. Execution time can increase significantly with
-    larger limits, especially in dense networks. For example, with 6 outgoing
-    connections per region, increasing the limit from 5 to 10 increases
-    potential routes from roughly 7,776 to 60 million before optimizations.
+    larger limits, especially in dense networks.
 
     Routes are explored one at a time using depth-first search.
 
