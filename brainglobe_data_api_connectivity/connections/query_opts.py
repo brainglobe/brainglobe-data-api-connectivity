@@ -31,19 +31,23 @@ class ConnectionsLookup(StrEnum):
 
     At a glance:
     - ALL : Use the `.edge_info`, if it exists, to lookup connections.
-    - REPORTED : Use the `.network` to lookup connections.
+    - NETWORK : Use the `.network` to lookup connections.
 
     The network objects that are constructed by the API use so-called
-    "reported" connection data, which is essentially the information per
-    connection that is deemed the most accurate or reliable. By contrast, the
-    edge information attached to a `Connections` object may contain multiple
-    reports for the same connection, with different levels of strength and
-    accuracy of the reported result. One must decide from which source to draw
-    information about the connections when posing queries about them.
+    "network" connection data, which is essentially the information per
+    connection that is deemed the most accurate or reliable and has been
+    selected for use in the network (as only one value can be selected per
+    connection).
+
+    By contrast, the edge information attached to a `Connections` object may
+    contain multiple reports for the same connection, with different levels of
+    strength and accuracy of the reported result. One must decide from which
+    source to draw information about the connections when posing queries about
+    them.
 
     These options are standardised as `StrEnum`s to avoid potentially diverging
     conventions in the API.
     """
 
     ALL = "all"
-    REPORTED = "reported"
+    NETWORK = "network"

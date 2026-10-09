@@ -33,7 +33,7 @@ def test_direct_connections_no_edge_info(
     (
         "node",
         "node_as",
-        "report_or_all",
+        "network_or_all",
         "expected_as_input",
         "expected_as_output",
     ),
@@ -41,31 +41,31 @@ def test_direct_connections_no_edge_info(
         pytest.param(
             2,
             NodeIs.ANY,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
             [0, 1, 3],
             [0],
-            id="2, either, reported",
+            id="2, either, network",
         ),
         pytest.param(
             2,
             NodeIs.INPUT,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
             [0, 1, 3],
             [],
-            id="2, input, reported",
+            id="2, input, network",
         ),
         pytest.param(
             2,
             NodeIs.OUTPUT,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
             [],
             [0],
-            id="2, output, reported",
+            id="2, output, network",
         ),
         pytest.param(
             2,
             NodeIs.ANY,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
             [0, 1, 3],
             [0],
             id="2, either, all",
@@ -89,7 +89,7 @@ def test_direct_connections_no_edge_info(
         pytest.param(
             0,
             NodeIs.ANY,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
             [0, 1, 2, 4],
             [0, 1, 2, 3],
             id="Asymmetry between input/output",
@@ -113,7 +113,7 @@ def test_direct_connections_no_edge_info(
         pytest.param(
             4,
             NodeIs.INPUT,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
             [1],
             [],
             id="Don't see edge only in edge info",
@@ -123,7 +123,7 @@ def test_direct_connections_no_edge_info(
 def test_direct_connections(
     node: int,
     node_as: NodeIs,
-    report_or_all: ConnectionsLookup,
+    network_or_all: ConnectionsLookup,
     expected_as_input: list[int],
     expected_as_output: list[int],
     DATA_DIR: Path,
@@ -139,7 +139,7 @@ def test_direct_connections(
     )
 
     as_input, as_output = G.direct_connections(
-        node, node_as=node_as, connections_lookup=report_or_all
+        node, node_as=node_as, connections_lookup=network_or_all
     )
 
     # Perform sorting, and cast the expected results to a set first, since this
@@ -148,9 +148,9 @@ def test_direct_connections(
     assert sorted(set(expected_as_output)) == sorted(as_output)
 
 
-@pytest.mark.parametrize("report_or_all", ConnectionsLookup)
+@pytest.mark.parametrize("network_or_all", ConnectionsLookup)
 def test_direct_connections_isolated_node(
-    report_or_all: ConnectionsLookup,
+    network_or_all: ConnectionsLookup,
 ) -> None:
     """Test that `direct_connections` correctly handles isolated nodes.
 
@@ -167,7 +167,7 @@ def test_direct_connections_isolated_node(
     isolated_node = G.node_indexes_from_information(pl.col("name") == "c")[0]
 
     as_input, as_output = G.direct_connections(
-        isolated_node, connections_lookup=report_or_all
+        isolated_node, connections_lookup=network_or_all
     )
     assert [] == as_input
     assert [] == as_output

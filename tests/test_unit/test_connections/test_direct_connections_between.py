@@ -14,6 +14,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
         "node1",
         "node0_as",
         "connections_lookup",
+        "filters",
+        "columns",
         "expected_shape",
     ],
     [
@@ -22,6 +24,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "B"},
             NodeIs.ANY,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (1, 9),
             id="A and B",
         ),
@@ -30,6 +34,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             1,
             NodeIs.ANY,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (1, 9),
             id="A and B (by index)",
         ),
@@ -37,7 +43,9 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "B"},
             {"name": "A"},
             NodeIs.ANY,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
+            None,
+            None,
             (1, 3),
             id="B and A (reported only)",
         ),
@@ -45,7 +53,9 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             1,
             0,
             NodeIs.ANY,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
+            None,
+            None,
             (1, 3),
             id="B and A by index (reported only)",
         ),
@@ -54,14 +64,38 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "C"},
             NodeIs.ANY,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (2, 9),
             id="A and C (all)",
+        ),
+        pytest.param(
+            0,
+            2,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            {"used": "yes"},
+            None,
+            (1, 9),
+            id="A and C (all) + filter (used connections)",
+        ),
+        pytest.param(
+            0,
+            2,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            {"used": "no"},
+            None,
+            (1, 9),
+            id="A and C (all) + filter (unused connections)",
         ),
         pytest.param(
             {"name": "A"},
             {"name": "C"},
             NodeIs.ANY,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
+            None,
+            None,
             (1, 3),
             id="A and C (reported only)",
         ),
@@ -69,7 +103,9 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "A"},
             {"name": "C"},
             NodeIs.INPUT,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
+            None,
+            None,
             (1, 3),
             id="A (as INPUT) and C (reported only)",
         ),
@@ -77,7 +113,9 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "A"},
             {"name": "C"},
             NodeIs.OUTPUT,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
+            None,
+            None,
             (0, 0),
             id="A (as OUTPUT) and C (reported only)",
         ),
@@ -85,7 +123,9 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "A"},
             {"name": "D"},
             NodeIs.ANY,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
+            None,
+            None,
             (0, 0),
             id="A and D (reported only)",
         ),
@@ -94,6 +134,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "A"},
             NodeIs.ANY,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (1, 9),
             id="B to A",
         ),
@@ -102,6 +144,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "A"},
             NodeIs.INPUT,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (0, 9),
             id="B (as INPUT) and A (no direct connection)",
         ),
@@ -109,7 +153,9 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "B"},
             {"name": "A"},
             NodeIs.OUTPUT,
-            ConnectionsLookup.REPORTED,
+            ConnectionsLookup.NETWORK,
+            None,
+            None,
             (1, 3),
             id="B (as OUTPUT) and A (reported only)",
         ),
@@ -118,6 +164,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "A"},
             NodeIs.OUTPUT,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (1, 9),
             id="B (as OUTPUT) and A",
         ),
@@ -126,6 +174,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "B"},
             NodeIs.INPUT,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (1, 9),
             id="A (as INPUT) and B",
         ),
@@ -134,6 +184,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "B"},
             NodeIs.OUTPUT,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (0, 9),
             id="A (as OUTPUT) and B (no direct connection)",
         ),
@@ -142,8 +194,70 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             {"name": "D"},
             NodeIs.ANY,
             ConnectionsLookup.ALL,
+            None,
+            None,
             (0, 9),
             id="A and D (no direct connection)",
+        ),
+        pytest.param(
+            0,
+            2,
+            NodeIs.INPUT,
+            ConnectionsLookup.ALL,
+            {"used": "no", "strength": "medium (1.0)"},
+            None,
+            (1, 9),
+            id="Multiple filters",
+        ),
+        pytest.param(
+            0,
+            2,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            None,
+            ["strength", "paper"],
+            (2, 2),
+            id="Multiple columns",
+        ),
+        pytest.param(
+            0,
+            2,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            {"used": "no"},
+            ["paper"],
+            (1, 1),
+            id="filter and one column",
+        ),
+        pytest.param(
+            0,
+            2,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            {"used": "yes", "strength": "medium (1.0)"},
+            ["paper", "strength"],
+            (0, 2),
+            id="A and C (no matching filtered connections)",
+        ),
+        pytest.param(
+            0,
+            1,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            {"used": "no"},
+            ["paper"],
+            (0, 1),
+            id="Valid filter value absent from selected connections",
+        ),
+        pytest.param(
+            0,
+            3,
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            {"used": "no"},
+            ["paper"],
+            (0, 1),
+            id="No connections with valid filter and columns",
         ),
     ],
 )
@@ -153,6 +267,8 @@ def test_direct_connection_between(
     node1,
     node0_as,
     connections_lookup,
+    filters,
+    columns,
     expected_shape,
 ):
     """Test finding direct connections between two nodes."""
@@ -161,9 +277,69 @@ def test_direct_connection_between(
         node1,
         node0_as=node0_as,
         connections_lookup=connections_lookup,
+        filters=filters,
+        columns=columns,
     )
 
     assert connections.shape == expected_shape
+
+
+@pytest.mark.parametrize(
+    ["options", "message"],
+    [
+        pytest.param(
+            {"filters": {"INVALID_COLUMN": "yes"}},
+            "Unknown columns",
+            id="Invalid filter name",
+        ),
+        pytest.param(
+            {"filters": {"used": "INVALID_VALUE"}},
+            "Unknown filter value",
+            id="Invalid filter value",
+        ),
+        pytest.param(
+            {"columns": ["INVALID_COLUMN"]},
+            "Unknown columns",
+            id="Invalid column",
+        ),
+        pytest.param(
+            {"columns": [0]},
+            "Unknown columns",
+            id="Invalid column (int index)",
+        ),
+    ],
+)
+@pytest.mark.parametrize("node1", [2, 3])
+def test_direct_connection_between_filter_column_warnings(
+    mini_G, options, message, node1
+):
+    """Warn for ignored options and reject invalid metadata options."""
+    with pytest.raises(ValueError, match=message):
+        mini_G.direct_connection_between(
+            0, node1, connections_lookup=ConnectionsLookup.ALL, **options
+        )
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        pytest.param(
+            {"filters": {"used": "yes"}}, id="Valid filter (NETWORK)"
+        ),
+        pytest.param(
+            {
+                "filters": {"used": "no", "strength": "medium (1.0)"},
+                "columns": ["paper", "strength"],
+            },
+            id="Valid multiple filters and columns (NETWORK)",
+        ),
+        pytest.param({"columns": ["paper"]}, id="Valid column (NETWORK)"),
+    ],
+)
+def test_direct_connection_filters_ignored(mini_G, options):
+    """Warn when valid filters or columns are ignored for network lookup."""
+    with pytest.warns(UserWarning, match="filters and columns are ignored"):
+        mini_G.direct_connection_between(0, 2, **options)
 
 
 def test_direct_connection_between_no_edge_info(mini_G):
