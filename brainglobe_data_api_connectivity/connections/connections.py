@@ -659,7 +659,7 @@ class Connections:
                     and self.edge_info is not None
                     else pl.DataFrame()
                 )
-            return pl.concat(edge_frames)
+            return pl.concat(edge_frames, how="vertical_relaxed")
 
         result_dfs = []
         for node_list, source in zip(
