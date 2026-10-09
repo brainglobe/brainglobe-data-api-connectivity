@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Callable, Container, Hashable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Container, Hashable, Iterable
+from typing import Any
 
 import polars as pl
 from rustworkx import PyDiGraph
