@@ -1,4 +1,4 @@
-from typing import Container
+from collections.abc import Container
 
 import polars as pl
 import pytest
