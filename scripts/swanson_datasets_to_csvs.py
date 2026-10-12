@@ -11,7 +11,7 @@ Excel files are updated.
 from pathlib import Path
 from typing import TypedDict
 
-import pandas as pd
+import polars as pl
 
 from brainglobe_data_api_connectivity.connections import Connections
 from brainglobe_data_api_connectivity.io import excel, validate_input
@@ -28,8 +28,11 @@ class SwansonParams(TypedDict):
     mrcc_row: int
 
 
-EDGE_INFO_MORPH_DICT = {"side": {"one": 1, "two": 2, "left": 1, "right": 2}}
 DATA_FOLDER = Path("data")
+MATRIX_IDS = ["CNS2f", "CNS2m"]
+
+EDGE_INFO_MORPH_DICT = {"side": {"one": 1, "two": 2, "left": 1, "right": 2}}
+
 SWANSON_PARAMS: SwansonParams = {
     "matrix_file": DATA_FOLDER
     / "swansonDatasetS3 CNS data matrices JHr1.xlsx",
@@ -41,36 +44,43 @@ SWANSON_PARAMS: SwansonParams = {
     "mrcc_row": 5,
 }
 
+
 if __name__ == "__main__":
     # Clean and save edge_information CSV
-    edge_info = pd.read_excel(SWANSON_PARAMS["edge_info_file"], header=[0, 1])
-    edge_info.columns = edge_info.columns.map(
-        lambda x: "_".join([str(i) for i in x if "Unnamed:" not in i])
+    edge_info = excel.get_df_from_excel(
+        SWANSON_PARAMS["edge_info_file"], header=[0, 1]
     )
     edge_info.columns = tidy.rename_columns(edge_info.columns)
+    edge_info = edge_info.with_columns(pl.col(pl.String).replace("", None))
 
-    morph_dict = EDGE_INFO_MORPH_DICT["side"]
-    for col in [c for c in edge_info.columns if "side" in c]:
-        edge_info[col] = edge_info[col].map(morph_dict)
+    side_columns = [col for col in edge_info.columns if "side" in col]
+    edge_info = edge_info.with_columns(
+        pl.col(side_columns).replace_strict(
+            EDGE_INFO_MORPH_DICT["side"],
+            default=None,
+            return_dtype=pl.Int64,
+        )
+    )
 
-    edge_info["connection_reported_value"] = edge_info[
-        "connection_reported_value"
-    ].str.lower()
-
-    for region_type in ["origin", "termination"]:
-        edge_info[f"{region_type}_region_id"] = (
-            edge_info[f"connection_{region_type}_region_abbr"]
-            + "_"
-            + edge_info[f"connection_{region_type}_region_side"].astype(str)
+    edge_info = edge_info.with_columns(
+        pl.col("connection_reported_value").str.to_lowercase(),
+    )
+    for region in ["origin", "termination"]:
+        edge_info = edge_info.with_columns(
+            pl.concat_str(
+                f"connection_{region}_region_abbr",
+                f"connection_{region}_region_side",
+                separator="_",
+            ).alias(f"{region}_region_id")
         )
 
     # Process each matrix sheet
-    for matrix_id in ["CNS2f", "CNS2m"]:
-        sheet = [
+    for matrix_id in MATRIX_IDS:
+        sheet = next(
             sheet
             for sheet in SWANSON_PARAMS["matrix_sheets"]
             if matrix_id in sheet
-        ][0]
+        )
 
         # Load and tidy node info
         node_info = excel.get_df_from_excel(
@@ -79,87 +89,92 @@ if __name__ == "__main__":
             data_range=SWANSON_PARAMS["node_info_range"],
             header=0,
         )
-        node_info.rename(columns={node_info.columns[0]: "Side"}, inplace=True)
+        node_info = node_info.rename({node_info.columns[0]: "Side"})
         node_info.columns = tidy.rename_columns(node_info.columns)
-        region_ids = node_info["abbr"] + "_" + node_info["side"].astype(str)
-        node_info["region_id"] = region_ids
-        node_info = node_info.replace("•", 0)
-        node_info.insert(0, "region_idx", range(len(node_info)))
+
+        node_info = node_info.with_columns(
+            pl.col("side", "level_1", "level_2", "level_3", "mrcc").cast(
+                pl.Int64
+            )
+        )
+        node_info = (
+            node_info.with_columns(
+                region_id=pl.concat_str("abbr", "side", separator="_")
+            )
+            .with_columns(pl.col(pl.String).replace("•", "0"))
+            .with_row_index("region_idx")
+        )
 
         # Load and validate matrix and ids
         processed_matrix = excel.get_df_from_excel(
             SWANSON_PARAMS["matrix_file"],
-            f"{sheet}",
+            sheet,
             SWANSON_PARAMS["matrix_range"],
         )
         validate_input.validate_adjacency_matrix(processed_matrix)
 
-        edge_table_processed = convert.convert_matrix_to_edge_table(
+        edge_table = convert.convert_matrix_to_edge_table(
             processed_matrix,
             region_ids=node_info["region_idx"],
-        )
+        ).with_columns(pl.col("weight").cast(pl.Int64))
 
         # Save outputs
         output_folder = DATA_FOLDER / matrix_id
         output_folder.mkdir(exist_ok=True)
 
-        edge_table_processed.to_csv(
+        edge_table.write_csv(
             output_folder / f"{matrix_id}_edge_table.csv",
-            index=False,
-            header=False,
+            include_header=False,
         )
-        node_info.to_csv(
-            output_folder / f"{matrix_id}_node_info.csv", index=False
-        )
+        node_info.write_csv(output_folder / f"{matrix_id}_node_info.csv")
 
         print(
-            f"Saved {matrix_id}_node_info.csv and ",
-            f"{matrix_id}_edge_table.csv in {output_folder} folder",
+            f"Saved node info and edge table for {matrix_id} "
+            f"in {output_folder}"
         )
 
     # Map region IDs in edge_info to node indices
+    region_index = dict(zip(node_info["region_id"], node_info["region_idx"]))
+
     for region in ["origin", "termination"]:
-        edge_info[f"{region}_region_idx"] = (
-            edge_info[f"{region}_region_id"]
-            .map(dict(zip(node_info["region_id"], node_info["region_idx"])))
-            .astype("Int64")
+        edge_info = edge_info.with_columns(
+            pl.col(f"{region}_region_id")
+            .replace_strict(
+                region_index,
+                default=None,
+                return_dtype=pl.Int64,
+            )
+            .alias(f"{region}_region_idx")
         )
 
-    edge_info.to_csv(DATA_FOLDER / "edge_info.csv", index=False)
+    edge_info.write_csv(DATA_FOLDER / "edge_info.csv")
+    print(f"Saved edge_info.csv in {DATA_FOLDER}")
 
-    print(
-        f"Saved edge_info.csv in {DATA_FOLDER} folder",
-    )
-
-    for matrix_id in ["CNS2f", "CNS2m"]:
+    for matrix_id in MATRIX_IDS:
         output_folder = DATA_FOLDER / matrix_id
-        if matrix_id == "CNS2m":
-            edge_info_sheet = edge_info[edge_info["male_or_female"] == "male"]
-        elif matrix_id == "CNS2f":
-            edge_info_sheet = edge_info[
-                edge_info["male_or_female"] == "female"
-            ]
+        sex = "male" if matrix_id == "CNS2m" else "female"
 
-        edge_info_sheet.to_csv(
-            output_folder / f"{matrix_id}_edge_info.csv", index=False
+        edge_info.filter(pl.col("male_or_female") == sex).write_csv(
+            output_folder / f"{matrix_id}_edge_info.csv"
         )
-        print(
-            f"Saved {matrix_id}_edge_info.csv in {output_folder} folder",
-        )
+        print(f"Saved {matrix_id}_edge_info.csv in {output_folder}")
 
-
-# Check that the generated CSVs can be loaded into Connections
-print("Checking whether CSV files can be used to created Connections object")
-for matrix_id in ["CNS2f", "CNS2m"]:
-    output_folder = DATA_FOLDER / matrix_id
-    connections = Connections.from_files(
-        node_info=output_folder / f"{matrix_id}_node_info.csv",
-        edge_table=output_folder / f"{matrix_id}_edge_table.csv",
-        edge_info=output_folder / f"{matrix_id}_edge_info.csv",
-        edge_info_from_col="origin_region_idx",
-        edge_info_to_col="termination_region_idx",
-        node_index_column="region_idx",
+    # Check that the generated CSVs can be loaded into Connections
+    print(
+        "Checking whether CSV files can be used to create Connections objects"
     )
-    print(f"Successfully created Connections for {matrix_id}")
-    print(f"Number of nodes: {connections.network.num_nodes()}")
-    print(f"Number of edges: {connections.network.num_edges()}")
+
+    for matrix_id in MATRIX_IDS:
+        output_folder = DATA_FOLDER / matrix_id
+        connections = Connections.from_files(
+            node_info=output_folder / f"{matrix_id}_node_info.csv",
+            edge_table=output_folder / f"{matrix_id}_edge_table.csv",
+            edge_info=output_folder / f"{matrix_id}_edge_info.csv",
+            edge_info_from_col="origin_region_idx",
+            edge_info_to_col="termination_region_idx",
+            node_index_column="region_idx",
+        )
+
+        print(f"Successfully created Connections for {matrix_id}")
+        print(f"Number of nodes: {connections.network.num_nodes()}")
+        print(f"Number of edges: {connections.network.num_edges()}")
