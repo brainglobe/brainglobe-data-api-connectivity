@@ -27,7 +27,7 @@ def test_load_test_data(DATA_DIR):
 
 
 @pytest.mark.parametrize(
-    "sex, metadata_rows",
+    "sex, edge_info_rows",
     [
         pytest.param("F", 48146, id="F"),
         pytest.param("female", 48146, id="female"),
@@ -42,7 +42,7 @@ def test_load_test_data(DATA_DIR):
         ),
     ],
 )
-def test_load_data(sex, metadata_rows):
+def test_load_data(sex, edge_info_rows):
     """Download the real dataset and check its graph and metadata."""
     loaded_data = load_data(sex=sex)
 
@@ -51,7 +51,7 @@ def test_load_data(sex, metadata_rows):
     assert loaded_data.network.num_nodes() == 834
     assert loaded_data.network.num_edges() == 74098
     assert loaded_data.nodes["region_id"][0] == "GPl_1"
-    assert loaded_data.edge_info.height == metadata_rows
+    assert loaded_data.edge_info.height == edge_info_rows
 
 
 def test_load_data_default_sex():
