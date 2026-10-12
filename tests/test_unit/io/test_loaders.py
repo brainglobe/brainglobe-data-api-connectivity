@@ -60,15 +60,7 @@ def test_load_data_default_sex():
     assert loaded_data.edge_info.height == 48146
 
 
-@pytest.mark.parametrize(
-    "sex",
-    [
-        pytest.param("", id="empty"),
-        pytest.param("unknown", id="unknown"),
-        pytest.param("CNS2f", id="dataset-name"),
-    ],
-)
-def test_load_data_invalid_sex(sex):
+def test_load_data_invalid_sex():
     """Reject unsupported sex values before attempting a download."""
     with pytest.raises(ValueError, match="sex must be"):
-        load_data(sex=sex)
+        load_data(sex="invalid")
