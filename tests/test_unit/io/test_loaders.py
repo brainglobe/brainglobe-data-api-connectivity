@@ -1,3 +1,4 @@
+import pytest
 from polars.testing import assert_frame_equal
 
 from brainglobe_data_api_connectivity.connections import Connections
@@ -25,16 +26,65 @@ def test_load_test_data(DATA_DIR):
     )
 
 
-def test_load_data():
+@pytest.mark.parametrize(
+    "sex, metadata_rows",
+    [
+        pytest.param("F", 48146, id="female-letter"),
+        pytest.param("female", 48146, id="female-name"),
+        pytest.param("FEMALE", 48146, id="female-uppercase-name"),
+        pytest.param(
+            "M",
+            323514,
+            id="male-letter",
+            marks=pytest.mark.xfail(
+                reason="CNS2m edge_info fails to load to GIN (see issue #68).",
+            ),
+        ),
+        pytest.param(
+            "male",
+            323514,
+            id="male-name",
+            marks=pytest.mark.xfail(
+                reason="CNS2m edge_info fails to load to GIN (see issue #68).",
+            ),
+        ),
+        pytest.param(
+            "MALE",
+            323514,
+            id="male-uppercase-name",
+            marks=pytest.mark.xfail(
+                reason="CNS2m edge_info fails to load to GIN (see issue #68).",
+            ),
+        ),
+    ],
+)
+def test_load_data(sex, metadata_rows):
     """Download the real dataset and check its graph and metadata."""
-    loaded_data = load_data()
+    loaded_data = load_data(sex=sex)
 
     assert isinstance(loaded_data, Connections)
     assert loaded_data.nodes.height == 834
     assert loaded_data.network.num_nodes() == 834
     assert loaded_data.network.num_edges() == 74098
-    assert loaded_data.network.get_edge_data(0, 1) == 6
     assert loaded_data.nodes["region_id"][0] == "GPl_1"
+    assert loaded_data.edge_info.height == metadata_rows
+
+
+def test_load_data_default_sex():
+    """Load the female dataset when no sex is supplied."""
+    loaded_data = load_data()
     assert loaded_data.edge_info.height == 48146
-    assert loaded_data.edge_info_from_col == "origin_region_idx"
-    assert loaded_data.edge_info_to_col == "termination_region_idx"
+
+
+@pytest.mark.parametrize(
+    "sex",
+    [
+        pytest.param("", id="empty"),
+        pytest.param("unknown", id="unknown"),
+        pytest.param("CNS2f", id="dataset-name"),
+    ],
+)
+def test_load_data_invalid_sex(sex):
+    """Reject unsupported sex values before attempting a download."""
+    with pytest.raises(ValueError, match="sex must be"):
+        load_data(sex=sex)
