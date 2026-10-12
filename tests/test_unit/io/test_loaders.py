@@ -29,29 +29,13 @@ def test_load_test_data(DATA_DIR):
 @pytest.mark.parametrize(
     "sex, metadata_rows",
     [
-        pytest.param("F", 48146, id="female-letter"),
-        pytest.param("female", 48146, id="female-name"),
-        pytest.param("FEMALE", 48146, id="female-uppercase-name"),
+        pytest.param("F", 48146, id="F"),
+        pytest.param("female", 48146, id="female"),
+        pytest.param("FEMALE", 48146, id="FEMALE"),
         pytest.param(
             "M",
             323514,
-            id="male-letter",
-            marks=pytest.mark.xfail(
-                reason="CNS2m edge_info fails to load to GIN (see issue #68).",
-            ),
-        ),
-        pytest.param(
-            "male",
-            323514,
-            id="male-name",
-            marks=pytest.mark.xfail(
-                reason="CNS2m edge_info fails to load to GIN (see issue #68).",
-            ),
-        ),
-        pytest.param(
-            "MALE",
-            323514,
-            id="male-uppercase-name",
+            id="M",
             marks=pytest.mark.xfail(
                 reason="CNS2m edge_info fails to load to GIN (see issue #68).",
             ),
