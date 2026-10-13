@@ -32,14 +32,7 @@ def test_load_test_data(DATA_DIR):
         pytest.param("F", 48146, id="F"),
         pytest.param("female", 48146, id="female"),
         pytest.param("FEMALE", 48146, id="FEMALE"),
-        pytest.param(
-            "M",
-            323514,
-            id="M",
-            marks=pytest.mark.xfail(
-                reason="CNS2m edge_info fails to load to GIN (see issue #68).",
-            ),
-        ),
+        pytest.param("M", 323514, id="M"),
     ],
 )
 def test_load_data(sex, edge_info_rows):
