@@ -635,6 +635,7 @@ class Connections:
                     directs, [NodeIs.INPUT, NodeIs.OUTPUT], strict=True
                 )
                 for other_index in node_list
+                # Avoid duplicating self-connections when node_as == NodeIs.ANY
                 if not (
                     other_index == node_idx
                     and role == NodeIs.OUTPUT
