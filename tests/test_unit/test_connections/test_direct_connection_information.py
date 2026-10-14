@@ -2,6 +2,9 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
+from brainglobe_data_api_connectivity.connections import (
+    ConnectionLookupUnavailable,
+)
 from brainglobe_data_api_connectivity.connections.query_opts import (
     ConnectionsLookup,
     NodeIs,
@@ -131,6 +134,34 @@ def test_direct_connection_info(
         node,
         node_as,
         connections_lookup=connections_lookup,
+        return_edges=return_edges,
+    )
+    assert_frame_equal(result, expected, check_row_order=not return_edges)
+
+
+@pytest.mark.parametrize("return_edges", [False, True])
+def test_direct_connection_info_no_edge_info(mini_G, return_edges) -> None:
+    """Reject ALL in both output modes and allow a REPORTED retry."""
+    expected = mini_G.direct_connection_info(
+        {"name": "B"},
+        connections_lookup=ConnectionsLookup.REPORTED,
+        return_edges=return_edges,
+    )
+    mini_G.edge_info = None
+
+    with pytest.raises(
+        ConnectionLookupUnavailable,
+        match="No edge information available for ALL connections.",
+    ):
+        mini_G.direct_connection_info(
+            {"name": "B"},
+            connections_lookup=ConnectionsLookup.ALL,
+            return_edges=return_edges,
+        )
+
+    result = mini_G.direct_connection_info(
+        {"name": "B"},
+        connections_lookup=ConnectionsLookup.REPORTED,
         return_edges=return_edges,
     )
     assert_frame_equal(result, expected, check_row_order=not return_edges)

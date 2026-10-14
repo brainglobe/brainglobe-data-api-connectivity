@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Callable, Container, Hashable, Iterable
 from pathlib import Path
 from typing import Any
@@ -9,6 +8,10 @@ from rustworkx import PyDiGraph
 from .._types import EdgeTable
 from .node_contractions import sum_of_weights
 from .query_opts import ConnectionsLookup, NodeIs
+
+
+class ConnectionLookupUnavailable(Exception):
+    """The requested connection lookup source is unavailable."""
 
 
 class Connections:
@@ -457,35 +460,25 @@ class Connections:
 
         return node_indexes[0]
 
-    def _get_available_connection_lookup(
+    def is_connection_lookup_available(
         self,
         connections_lookup: ConnectionsLookup,
-    ) -> ConnectionsLookup:
-        """Set the connection lookup source based on the available information.
+    ) -> bool:
+        """Check if the requested connection lookup is available.
 
-        If all connections are requested but edge information is unavailable,
-        warn the user and fall back to connections reported by the graph.
-
-        Args:
-            connections_lookup:
-                Requested source for connection lookup.
-
-        Returns:
-            The requested lookup source if available; otherwise,
-            `ConnectionsLookup.REPORTED`.
+        Raises:
+            ConnectionLookupUnavailable:
+                If ALL connections are requested without edge information.
         """
         if (
             connections_lookup == ConnectionsLookup.ALL
             and self.edge_info is None
         ):
-            warnings.warn(
-                "No edge information available. "
-                "Using graph information instead.",
-                UserWarning,
+            raise ConnectionLookupUnavailable(
+                "No edge information available for ALL connections."
             )
-            return ConnectionsLookup.REPORTED
 
-        return connections_lookup
+        return True
 
     def direct_connections(
         self,
@@ -528,10 +521,10 @@ class Connections:
                 exists. Will be empty if only input nodes are requested.
 
         Raises:
-            TypeError:
-                When attempting to search `.edge_info` for connection reports,
-                but the attribute has not been set.
+            ConnectionLookupUnavailable:
+                If ALL is requested but edge information is unavailable.
         """
+        self.is_connection_lookup_available(connections_lookup)
         connections_as_input = []
         connections_as_output = []
 
@@ -551,11 +544,7 @@ class Connections:
                     )
                 ]
         else:
-            if self.edge_info is None:
-                raise TypeError(
-                    "Edge information is not assigned "
-                    "(`self.edge_info` is `None`)"
-                )
+            self.edge_info: pl.DataFrame
             if node_as != NodeIs.OUTPUT:
                 connections_as_input = (
                     self.edge_info.filter(
@@ -598,7 +587,7 @@ class Connections:
                 Role of the queried node: input, output, or either.
             connections_lookup: ConnectionsLookup
                 Source from which to find connections. ALL uses edge metadata,
-                warning and falling back to the network if unavailable.
+                which must be available.
             return_edges: bool
                 If True, return edge information instead of node information.
 
@@ -616,12 +605,12 @@ class Connections:
                 REPORTED.
 
         Raises:
+            ConnectionLookupUnavailable:
+                If ALL is requested but edge information is unavailable.
             ValueError:
                 If a metadata dictionary does not identify exactly one node.
         """
-        connections_lookup = self._get_available_connection_lookup(
-            connections_lookup
-        )
+        self.is_connection_lookup_available(connections_lookup)
         node_idx = (
             self._get_unique_node_index(node)
             if isinstance(node, dict)
@@ -767,10 +756,12 @@ class Connections:
 
         Returns:
             Matching connections (pl.DataFrame), empty if none exist.
+
+        Raises:
+            ConnectionLookupUnavailable:
+                If ALL is requested but edge information is unavailable.
         """
-        connections_lookup = self._get_available_connection_lookup(
-            connections_lookup
-        )
+        self.is_connection_lookup_available(connections_lookup)
 
         if connections_lookup == ConnectionsLookup.ALL:
             return self._direct_connection_from_edge_info(
@@ -804,11 +795,13 @@ class Connections:
         Returns:
             Matching bidirectional connections (pl.DataFrame), empty if none
             exist.
+
+        Raises:
+            ConnectionLookupUnavailable:
+                If ALL is requested but edge information is unavailable.
         """
 
-        connections_lookup = self._get_available_connection_lookup(
-            connections_lookup
-        )
+        self.is_connection_lookup_available(connections_lookup)
 
         node_idx = (
             self._get_unique_node_index(node)

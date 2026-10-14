@@ -3,7 +3,10 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from brainglobe_data_api_connectivity.connections import Connections
+from brainglobe_data_api_connectivity.connections import (
+    ConnectionLookupUnavailable,
+    Connections,
+)
 from brainglobe_data_api_connectivity.connections.query_opts import (
     ConnectionsLookup,
     NodeIs,
@@ -12,8 +15,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
 
 def test_direct_connections_no_edge_info(
     raises_error,
-    expected_error: Exception = TypeError(
-        "Edge information is not assigned (`self.edge_info` is `None`)"
+    expected_error: Exception = ConnectionLookupUnavailable(
+        "No edge information available for ALL connections."
     ),
 ) -> None:
     """
@@ -27,6 +30,10 @@ def test_direct_connections_no_edge_info(
     )
     with raises_error(expected_error):
         G.direct_connections(0, connections_lookup=ConnectionsLookup.ALL)
+
+    assert G.direct_connections(
+        0, connections_lookup=ConnectionsLookup.REPORTED
+    ) == ([1], [2])
 
 
 @pytest.mark.parametrize(

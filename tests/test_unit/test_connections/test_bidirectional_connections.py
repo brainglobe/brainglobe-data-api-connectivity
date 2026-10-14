@@ -1,7 +1,10 @@
 import polars as pl
 import pytest
 
-from brainglobe_data_api_connectivity.connections import Connections
+from brainglobe_data_api_connectivity.connections import (
+    ConnectionLookupUnavailable,
+    Connections,
+)
 from brainglobe_data_api_connectivity.connections.query_opts import (
     ConnectionsLookup,
 )
@@ -134,17 +137,19 @@ def test_bidirectional_connections(
 
 
 def test_bidirectional_connections_no_edge_info(mini_G_bidi):
-    """Test fallback to graph when edge information is unavailable."""
+    """Reject ALL without edge information and allow a REPORTED retry."""
     mini_G_bidi.edge_info = None
 
-    with pytest.warns(
-        UserWarning,
-        match="No edge information available. "
-        "Using graph information instead.",
+    with pytest.raises(
+        ConnectionLookupUnavailable,
+        match="No edge information available for ALL connections.",
     ):
-        connections = mini_G_bidi.bidirectional_connections(
+        mini_G_bidi.bidirectional_connections(
             {"name": "B"},
             connections_lookup=ConnectionsLookup.ALL,
         )
 
+    connections = mini_G_bidi.bidirectional_connections(
+        {"name": "B"}, connections_lookup=ConnectionsLookup.REPORTED
+    )
     assert connections.shape[0] == 4
