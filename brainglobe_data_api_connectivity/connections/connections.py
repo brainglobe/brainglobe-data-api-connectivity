@@ -610,7 +610,9 @@ class Connections:
             ValueError:
                 If a metadata dictionary does not identify exactly one node.
         """
+
         self.is_connection_lookup_available(connections_lookup)
+
         node_idx = (
             self._get_unique_node_index(node)
             if isinstance(node, dict)
@@ -624,42 +626,80 @@ class Connections:
         )
 
         if return_edges:
-            edge_frames = [
-                self.direct_connection_between(
-                    node_idx,
-                    other_index,
-                    connections_lookup=connections_lookup,
-                    node0_as=role,
-                )
-                for node_list, role in zip(
-                    directs, [NodeIs.INPUT, NodeIs.OUTPUT], strict=True
-                )
-                for other_index in node_list
-                # Avoid duplicating self-connections when node_as == NodeIs.ANY
-                if not (
-                    other_index == node_idx
-                    and role == NodeIs.OUTPUT
-                    and node_as == NodeIs.ANY
-                )
-            ]
-            if not edge_frames:
-                return (
-                    self.edge_info.head(0)
-                    if connections_lookup == ConnectionsLookup.ALL
-                    and self.edge_info is not None
-                    else pl.DataFrame()
-                )
-            return pl.concat(edge_frames, how="vertical_relaxed")
+            # Return edge info
+            output_nodes, input_nodes = directs
 
-        result_dfs = []
+            # ALL: retrieve edge weights from edge metadata
+            if connections_lookup == ConnectionsLookup.ALL:
+                self.edge_info: pl.DataFrame
+                query_df = pl.DataFrame(
+                    {
+                        self._edge_info_from_index_col: (
+                            [node_idx] * len(output_nodes) + input_nodes
+                        ),
+                        self._edge_info_to_index_col: (
+                            output_nodes + [node_idx] * len(input_nodes)
+                        ),
+                    },
+                    schema_overrides={
+                        self._edge_info_from_index_col: self.edge_info.schema[
+                            self._edge_info_from_index_col
+                        ],
+                        self._edge_info_to_index_col: self.edge_info.schema[
+                            self._edge_info_to_index_col
+                        ],
+                    },
+                )
+
+                return self.edge_info.join(
+                    query_df,
+                    on=[
+                        self._edge_info_from_index_col,
+                        self._edge_info_to_index_col,
+                    ],
+                    how="semi",
+                )
+
+            # REPORTED: get the edges and their weights from .network
+            edges = []
+
+            for to_node in output_nodes:
+                edges.append(
+                    {
+                        "from": node_idx,
+                        "to": to_node,
+                        "value": self.network.get_edge_data(node_idx, to_node),
+                    }
+                )
+
+            for from_node in input_nodes:
+                # Avoid returning a self-connection twice
+                if from_node == node_idx and node_as == NodeIs.ANY:
+                    continue
+
+                edges.append(
+                    {
+                        "from": from_node,
+                        "to": node_idx,
+                        "value": self.network.get_edge_data(
+                            from_node, node_idx
+                        ),
+                    }
+                )
+
+            return pl.DataFrame(edges)
+
+        # Return node info
+        nodes_info = []
+
         for node_list, source in zip(
             directs, ["input", "output"], strict=True
         ):
             node_df = self.node_information_from_index(node_list)
             node_df = node_df.with_columns(pl.lit(source).alias("node_as"))
-            result_dfs.append(node_df)
+            nodes_info.append(node_df)
 
-        return pl.concat(result_dfs)
+        return pl.concat(nodes_info)
 
     def _direct_connection_from_edge_info(
         self,
