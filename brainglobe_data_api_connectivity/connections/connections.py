@@ -696,7 +696,7 @@ class Connections:
             directs, ["input", "output"], strict=True
         ):
             node_df = self.node_information_from_index(node_list)
-            node_df = node_df.with_columns(pl.lit(source).alias("node_as"))
+            node_df.insert_column(0, pl.Series("node_as", [source]))
             nodes_info.append(node_df)
 
         return pl.concat(nodes_info)
