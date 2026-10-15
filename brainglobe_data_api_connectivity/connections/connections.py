@@ -624,42 +624,18 @@ class Connections:
         )
 
         if return_edges:
-            output_nodes, input_nodes = directs
-
             if connections_lookup == ConnectionsLookup.ALL:
-                return self._direct_connection_from_edge_info(
+                return self._direct_connections_from_edge_info(
                     node0=node_idx,
                     node1=None,
                     node0_as=node_as,
                 )
 
-            edges = []
-
-            for to_node in output_nodes:
-                edges.append(
-                    {
-                        "from": node_idx,
-                        "to": to_node,
-                        "value": self.network.get_edge_data(node_idx, to_node),
-                    }
-                )
-
-            for from_node in input_nodes:
-                # Avoid returning a self-connection twice
-                if from_node == node_idx and node_as == NodeIs.ANY:
-                    continue
-
-                edges.append(
-                    {
-                        "from": from_node,
-                        "to": node_idx,
-                        "value": self.network.get_edge_data(
-                            from_node, node_idx
-                        ),
-                    }
-                )
-
-            return pl.DataFrame(edges)
+            return self._direct_connections_from_network(
+                node0=node_idx,
+                node1=None,
+                node0_as=node_as,
+            )
 
         # Return node info
         nodes_info = []
@@ -676,7 +652,7 @@ class Connections:
         # Return an empty DataFrame with the required columns
         return node_df.insert_column(0, pl.Series("node_as", dtype=pl.String))
 
-    def _direct_connection_from_edge_info(
+    def _direct_connections_from_edge_info(
         self,
         node0: int | dict[str, str | int],
         node1: int | dict[str, str | int] | None,
@@ -691,7 +667,7 @@ class Connections:
             if isinstance(node, dict)
             else node
             for node in [node0, node1]
-        ]
+        ]  # Use dict value or keep original index/None
 
         from_col = pl.col(self._edge_info_from_index_col)
         to_col = pl.col(self._edge_info_to_index_col)
@@ -728,41 +704,74 @@ class Connections:
 
         return self.edge_info.filter(connection_filter)
 
-    def _direct_connection_from_network(
+    def _direct_connections_from_network(
         self,
         node0: int | dict[str, str | int],
-        node1: int | dict[str, str | int],
+        node1: int | dict[str, str | int] | None,
         node0_as: NodeIs,
     ) -> pl.DataFrame:
-        """Return direct connections between two nodes from the network."""
+        """Return direct connections from the network."""
 
-        node0_idx, node1_idx = [
-            self._get_unique_node_index(node)
-            if isinstance(node, dict)
-            else node
-            for node in [node0, node1]
-        ]
+        node0_idx: int = (
+            self._get_unique_node_index(node0)
+            if isinstance(node0, dict)
+            else node0
+        )
+        node1_idx: int | None = (
+            self._get_unique_node_index(node1)
+            if isinstance(node1, dict)
+            else node1
+        )
 
         node0_id, node1_id = [
             next(iter(node.values())) if isinstance(node, dict) else node
             for node in (node0, node1)
-        ]  # stays idx if this is used as input
+        ]  # Use dict value or keep original index/None
 
         connections = []
 
-        if node0_as != NodeIs.OUTPUT:
-            if self.network.has_edge(node0_idx, node1_idx):
-                edge_data = self.network.get_edge_data(node0_idx, node1_idx)
+        if node1_idx is None:
+            # Find all direct connections involving node0
+            outputs, inputs = self.direct_connections(
+                node_internal_index=node0_idx,
+                node_as=node0_as,
+                connections_lookup=ConnectionsLookup.REPORTED,
+            )
+
+            outgoing = [(node0_idx, n) for n in outputs]
+            incoming = [(n, node0_idx) for n in inputs]
+
+            # Remove duplicate connections, including feedback loops
+            edges = dict.fromkeys(outgoing + incoming)
+
+            for from_idx, to_idx in edges:
+                edge_data = self.network.get_edge_data(from_idx, to_idx)
                 connections.append(
-                    {"from": node0_id, "to": node1_id, "value": edge_data}
+                    {"from": from_idx, "to": to_idx, "value": edge_data}
                 )
 
-        if node0_as != NodeIs.INPUT:
-            if self.network.has_edge(node1_idx, node0_idx):
-                edge_data = self.network.get_edge_data(node1_idx, node0_idx)
-                connections.append(
-                    {"from": node1_id, "to": node0_id, "value": edge_data}
-                )
+        else:
+            # Find direct connections between node0 and node1
+            if node0_as != NodeIs.OUTPUT:
+                if self.network.has_edge(node0_idx, node1_idx):
+                    edge_data = self.network.get_edge_data(
+                        node0_idx, node1_idx
+                    )
+                    connections.append(
+                        {"from": node0_id, "to": node1_id, "value": edge_data}
+                    )
+
+            if node0_as != NodeIs.INPUT:
+                # Avoid returning a feedback loop twice
+                if (
+                    node0_idx != node1_idx or node0_as != NodeIs.ANY
+                ) and self.network.has_edge(node1_idx, node0_idx):
+                    edge_data = self.network.get_edge_data(
+                        node1_idx, node0_idx
+                    )
+                    connections.append(
+                        {"from": node1_id, "to": node0_id, "value": edge_data}
+                    )
 
         return pl.DataFrame(connections)
 
@@ -800,13 +809,13 @@ class Connections:
         self.is_connection_lookup_available(connections_lookup)
 
         if connections_lookup == ConnectionsLookup.ALL:
-            return self._direct_connection_from_edge_info(
+            return self._direct_connections_from_edge_info(
                 node0,
                 node1,
                 node0_as,
             )
 
-        return self._direct_connection_from_network(
+        return self._direct_connections_from_network(
             node0,
             node1,
             node0_as,
