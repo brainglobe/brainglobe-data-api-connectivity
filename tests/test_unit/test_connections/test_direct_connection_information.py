@@ -21,13 +21,13 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             False,
             pl.DataFrame(
                 {
+                    "node_as": ["input"],
                     "name": ["C"],
                     "idx": [2],
                     "group": ["C"],
                     "notes": ["C is part of group C"],
                     "custom_index": [3],
                     "__node_index": [2],
-                    "node_as": ["input"],
                 }
             ),
             id="index input nodes",
@@ -59,13 +59,13 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             False,
             pl.DataFrame(
                 {
+                    "node_as": ["output"],
                     "name": ["A"],
                     "idx": [0],
                     "group": ["AB"],
                     "notes": ["A is part of group AB"],
                     "custom_index": [1],
                     "__node_index": [0],
-                    "node_as": ["output"],
                 }
             ),
             id="name output nodes",
@@ -85,13 +85,13 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             False,
             pl.DataFrame(
                 {
+                    "node_as": ["input", "output"],
                     "name": ["C", "A"],
                     "idx": [2, 0],
                     "group": ["C", "AB"],
                     "notes": ["C is part of group C", "A is part of group AB"],
                     "custom_index": [3, 1],
                     "__node_index": [2, 0],
-                    "node_as": ["input", "output"],
                 }
             ),
             id="name and group both any nodes",
@@ -174,13 +174,13 @@ def test_direct_connection_info_no_edge_info(mini_G, return_edges) -> None:
             False,
             pl.DataFrame(
                 schema={
+                    "node_as": pl.String,
                     "name": pl.String,
                     "idx": pl.Int64,
                     "group": pl.String,
                     "notes": pl.String,
                     "custom_index": pl.Int64,
                     "__node_index": pl.Int64,
-                    "node_as": pl.String,
                 }
             ),
             id="nodes",
