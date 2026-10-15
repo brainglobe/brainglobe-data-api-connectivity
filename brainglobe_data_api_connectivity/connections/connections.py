@@ -463,7 +463,7 @@ class Connections:
     def is_connection_lookup_available(
         self,
         connections_lookup: ConnectionsLookup,
-    ) -> bool:
+    ) -> None:
         """Check if the requested connection lookup is available.
 
         Raises:
@@ -477,8 +477,6 @@ class Connections:
             raise ConnectionLookupUnavailable(
                 "No edge information available for ALL connections."
             )
-
-        return True
 
     def direct_connections(
         self,
