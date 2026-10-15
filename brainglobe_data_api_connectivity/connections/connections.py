@@ -624,41 +624,15 @@ class Connections:
         )
 
         if return_edges:
-            # Return edge info
             output_nodes, input_nodes = directs
 
-            # ALL: retrieve edge weights from edge metadata
             if connections_lookup == ConnectionsLookup.ALL:
-                self.edge_info: pl.DataFrame
-                query_df = pl.DataFrame(
-                    {
-                        self._edge_info_from_index_col: (
-                            [node_idx] * len(output_nodes) + input_nodes
-                        ),
-                        self._edge_info_to_index_col: (
-                            output_nodes + [node_idx] * len(input_nodes)
-                        ),
-                    },
-                    schema_overrides={
-                        self._edge_info_from_index_col: self.edge_info.schema[
-                            self._edge_info_from_index_col
-                        ],
-                        self._edge_info_to_index_col: self.edge_info.schema[
-                            self._edge_info_to_index_col
-                        ],
-                    },
+                return self._direct_connection_from_edge_info(
+                    node0=node_idx,
+                    node1=None,
+                    node0_as=node_as,
                 )
 
-                return self.edge_info.join(
-                    query_df,
-                    on=[
-                        self._edge_info_from_index_col,
-                        self._edge_info_to_index_col,
-                    ],
-                    how="semi",
-                )
-
-            # REPORTED: get the edges and their weights from .network
             edges = []
 
             for to_node in output_nodes:
@@ -705,10 +679,10 @@ class Connections:
     def _direct_connection_from_edge_info(
         self,
         node0: int | dict[str, str | int],
-        node1: int | dict[str, str | int],
+        node1: int | dict[str, str | int] | None,
         node0_as: NodeIs,
     ) -> pl.DataFrame:
-        """Return direct connections between two nodes from `edge_info`."""
+        """Return direct connections involving from `edge_info`."""
 
         self.edge_info: pl.DataFrame
 
@@ -722,19 +696,37 @@ class Connections:
         from_col = pl.col(self._edge_info_from_index_col)
         to_col = pl.col(self._edge_info_to_index_col)
 
-        if node0_as == NodeIs.INPUT:
-            connection_filter = (from_col == node0_idx) & (to_col == node1_idx)
+        if node1_idx is None:
+            # Find direct connections involving node0
+            if node0_as == NodeIs.INPUT:
+                connection_filter = from_col == node0_idx
 
-        elif node0_as == NodeIs.OUTPUT:
-            connection_filter = (from_col == node1_idx) & (to_col == node0_idx)
+            elif node0_as == NodeIs.OUTPUT:
+                connection_filter = to_col == node0_idx
+
+            else:
+                connection_filter = (from_col == node0_idx) | (
+                    to_col == node0_idx
+                )
 
         else:
-            connection_filter = (
-                (from_col == node0_idx) & (to_col == node1_idx)
-            ) | ((from_col == node1_idx) & (to_col == node0_idx))
+            # Find direct connections between node0 and node1
+            if node0_as == NodeIs.INPUT:
+                connection_filter = (from_col == node0_idx) & (
+                    to_col == node1_idx
+                )
 
-        connections = self.edge_info.filter(connection_filter)
-        return pl.DataFrame(connections)
+            elif node0_as == NodeIs.OUTPUT:
+                connection_filter = (from_col == node1_idx) & (
+                    to_col == node0_idx
+                )
+
+            else:
+                connection_filter = (
+                    (from_col == node0_idx) & (to_col == node1_idx)
+                ) | ((from_col == node1_idx) & (to_col == node0_idx))
+
+        return self.edge_info.filter(connection_filter)
 
     def _direct_connection_from_network(
         self,
