@@ -801,6 +801,8 @@ class Connections:
         Raises:
             ConnectionLookupUnavailable:
                 If ALL is requested but edge information is unavailable.
+            ValueError:
+                If a metadata dictionary does not identify exactly one node.
         """
         self.is_connection_lookup_available(connections_lookup)
 
@@ -840,6 +842,8 @@ class Connections:
         Raises:
             ConnectionLookupUnavailable:
                 If ALL is requested but edge information is unavailable.
+            ValueError:
+                If a metadata dictionary does not identify exactly one node.
         """
 
         self.is_connection_lookup_available(connections_lookup)
