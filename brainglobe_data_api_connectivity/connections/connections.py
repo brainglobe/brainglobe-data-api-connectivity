@@ -660,7 +660,7 @@ class Connections:
         node1: int | dict[str, str | int] | None,
         node0_as: NodeIs,
     ) -> pl.DataFrame:
-        """Return direct connections involving from `edge_info`."""
+        """Return direct connections from `edge_info`."""
 
         self.edge_info: pl.DataFrame
 
