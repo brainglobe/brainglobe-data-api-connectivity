@@ -747,8 +747,21 @@ class Connections:
 
             for from_idx, to_idx in edges:
                 edge_data = self.network.get_edge_data(from_idx, to_idx)
+
+                if isinstance(node0, dict):
+                    key = list(node0.keys())[0]
+
+                    from_info = self.node_information_from_index([from_idx])
+                    to_info = self.node_information_from_index([to_idx])
+
+                    from_id = from_info[key][0]
+                    to_id = to_info[key][0]
+                else:
+                    from_id = from_idx
+                    to_id = to_idx
+
                 connections.append(
-                    {"from": from_idx, "to": to_idx, "value": edge_data}
+                    {"from": from_id, "to": to_id, "value": edge_data}
                 )
 
         else:
