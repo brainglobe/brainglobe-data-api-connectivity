@@ -714,15 +714,16 @@ class Connections:
     ) -> pl.DataFrame:
         """Return direct connections from the network."""
 
-        node0_idx, node1_idx = [
-            self._get_unique_node_index(node)
-            if isinstance(node, dict)
-            else node
-            for node in [node0, node1]
-        ]  # Use dict value or keep original index/None
-
-        # Narrow down node0_idx inferred type for mypy.
-        assert isinstance(node0_idx, int)
+        node0_idx: int = (
+            self._get_unique_node_index(node0)
+            if isinstance(node0, dict)
+            else node0
+        )
+        node1_idx: int | None = (
+            self._get_unique_node_index(node1)
+            if isinstance(node1, dict)
+            else node1
+        )
 
         node0_id, node1_id = [
             next(iter(node.values())) if isinstance(node, dict) else node
