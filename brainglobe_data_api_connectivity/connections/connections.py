@@ -647,8 +647,10 @@ class Connections:
             if len(node_df) > 0:
                 node_df.insert_column(0, pl.Series("node_as", [source]))
                 nodes_info.append(node_df)
+                
         if len(nodes_info) > 0:
             return pl.concat(nodes_info)
+            
         # Return an empty DataFrame with the required columns
         return node_df.insert_column(0, pl.Series("node_as", dtype=pl.String))
 
