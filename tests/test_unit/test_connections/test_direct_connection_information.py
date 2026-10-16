@@ -15,6 +15,42 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
     ("node", "node_as", "connections_lookup", "return_edges", "expected"),
     [
         pytest.param(
+            {"name": "B"},
+            NodeIs.INPUT,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame({"from": ["B"], "to": ["C"], "value": [1.0]}),
+            id="One node as INPUT (name) reported edges",
+        ),
+        pytest.param(
+            {"name": "B"},
+            NodeIs.ANY,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame(
+                {
+                    "from": ["B", "A"],
+                    "to": ["C", "B"],
+                    "value": [1.0, 0.1],
+                }
+            ),
+            id="One node as ANY (name) reported edges",
+        ),
+        pytest.param(
+            1,
+            NodeIs.ANY,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame(
+                {
+                    "from": [1, 0],
+                    "to": [2, 1],
+                    "value": [1.0, 0.1],
+                }
+            ),
+            id="One node as ANY (idx) reported edges",
+        ),
+        pytest.param(
             1,
             NodeIs.INPUT,
             ConnectionsLookup.REPORTED,
@@ -75,7 +111,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             NodeIs.OUTPUT,
             ConnectionsLookup.REPORTED,
             True,
-            pl.DataFrame({"from": [0], "to": [1], "value": [0.1]}),
+            pl.DataFrame({"from": "A", "to": "B", "value": [0.1]}),
             id="name output reported edges",
         ),
         pytest.param(
@@ -95,14 +131,6 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                 }
             ),
             id="name and group both any nodes",
-        ),
-        pytest.param(
-            {"name": "B", "group": "AB"},
-            NodeIs.ANY,
-            ConnectionsLookup.REPORTED,
-            True,
-            pl.DataFrame({"from": [1, 0], "to": [2, 1], "value": [1.0, 0.1]}),
-            id="name and group both any reported edges",
         ),
         pytest.param(
             {"name": "B", "group": "AB"},

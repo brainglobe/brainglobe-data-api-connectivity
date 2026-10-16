@@ -611,28 +611,28 @@ class Connections:
 
         self.is_connection_lookup_available(connections_lookup)
 
-        node_idx = (
-            self._get_unique_node_index(node)
-            if isinstance(node, dict)
-            else node
-        )
-
         if return_edges:
             if connections_lookup == ConnectionsLookup.ALL:
                 return self._direct_connections_from_edge_info(
-                    node0=node_idx,
+                    node0=node,
                     node1=None,
                     node0_as=node_as,
                 )
 
             return self._direct_connections_from_network(
-                node0=node_idx,
+                node0=node,
                 node1=None,
                 node0_as=node_as,
             )
 
         # Return node info
         nodes_info = []
+
+        node_idx = (
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+        )
 
         directs = self.direct_connections(
             node_internal_index=node_idx,
