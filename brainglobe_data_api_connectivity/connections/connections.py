@@ -617,12 +617,6 @@ class Connections:
             else node
         )
 
-        directs = self.direct_connections(
-            node_internal_index=node_idx,
-            node_as=node_as,
-            connections_lookup=connections_lookup,
-        )
-
         if return_edges:
             if connections_lookup == ConnectionsLookup.ALL:
                 return self._direct_connections_from_edge_info(
@@ -639,6 +633,12 @@ class Connections:
 
         # Return node info
         nodes_info = []
+
+        directs = self.direct_connections(
+            node_internal_index=node_idx,
+            node_as=node_as,
+            connections_lookup=connections_lookup,
+        )
 
         for node_list, source in zip(
             directs, ["input", "output"], strict=True
