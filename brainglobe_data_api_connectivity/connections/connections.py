@@ -647,8 +647,10 @@ class Connections:
             if len(node_df) > 0:
                 node_df.insert_column(0, pl.Series("node_as", [source]))
                 nodes_info.append(node_df)
+
         if len(nodes_info) > 0:
             return pl.concat(nodes_info)
+
         # Return an empty DataFrame with the required columns
         return node_df.insert_column(0, pl.Series("node_as", dtype=pl.String))
 
@@ -658,7 +660,7 @@ class Connections:
         node1: int | dict[str, str | int] | None,
         node0_as: NodeIs,
     ) -> pl.DataFrame:
-        """Return direct connections involving from `edge_info`."""
+        """Return direct connections from `edge_info`."""
 
         self.edge_info: pl.DataFrame
 
