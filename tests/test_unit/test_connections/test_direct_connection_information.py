@@ -1,0 +1,240 @@
+import polars as pl
+import pytest
+from polars.testing import assert_frame_equal
+
+from brainglobe_data_api_connectivity.connections import (
+    ConnectionLookupUnavailable,
+)
+from brainglobe_data_api_connectivity.connections.query_opts import (
+    ConnectionsLookup,
+    NodeIs,
+)
+
+
+@pytest.mark.parametrize(
+    ("node", "node_as", "connections_lookup", "return_edges", "expected"),
+    [
+        pytest.param(
+            {"name": "B"},
+            NodeIs.INPUT,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame({"from": ["B"], "to": ["C"], "value": [1.0]}),
+            id="One node as INPUT (name) reported edges",
+        ),
+        pytest.param(
+            {"name": "B"},
+            NodeIs.ANY,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame(
+                {
+                    "from": ["B", "A"],
+                    "to": ["C", "B"],
+                    "value": [1.0, 0.1],
+                }
+            ),
+            id="One node as ANY (name) reported edges",
+        ),
+        pytest.param(
+            1,
+            NodeIs.ANY,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame(
+                {
+                    "from": [1, 0],
+                    "to": [2, 1],
+                    "value": [1.0, 0.1],
+                }
+            ),
+            id="One node as ANY (idx) reported edges",
+        ),
+        pytest.param(
+            1,
+            NodeIs.INPUT,
+            ConnectionsLookup.REPORTED,
+            False,
+            pl.DataFrame(
+                {
+                    "node_as": ["input"],
+                    "name": ["C"],
+                    "idx": [2],
+                    "group": ["C"],
+                    "notes": ["C is part of group C"],
+                    "custom_index": [3],
+                    "__node_index": [2],
+                }
+            ),
+            id="index input nodes",
+        ),
+        pytest.param(
+            1,
+            NodeIs.INPUT,
+            ConnectionsLookup.ALL,
+            True,
+            pl.DataFrame(
+                {
+                    "from_id": ["B"],
+                    "to_id": ["C"],
+                    "from": [1],
+                    "to": [2],
+                    "used": ["yes"],
+                    "paper": ["author et al., 2025"],
+                    "strength": ["medium (1.0)"],
+                    "__idx_from": [1],
+                    "__idx_to": [2],
+                }
+            ),
+            id="index input all edges",
+        ),
+        pytest.param(
+            {"name": "B"},
+            NodeIs.OUTPUT,
+            ConnectionsLookup.ALL,
+            False,
+            pl.DataFrame(
+                {
+                    "node_as": ["output"],
+                    "name": ["A"],
+                    "idx": [0],
+                    "group": ["AB"],
+                    "notes": ["A is part of group AB"],
+                    "custom_index": [1],
+                    "__node_index": [0],
+                }
+            ),
+            id="name output nodes",
+        ),
+        pytest.param(
+            {"name": "B"},
+            NodeIs.OUTPUT,
+            ConnectionsLookup.REPORTED,
+            True,
+            pl.DataFrame({"from": "A", "to": "B", "value": [0.1]}),
+            id="name output reported edges",
+        ),
+        pytest.param(
+            {"name": "B", "group": "AB"},
+            NodeIs.ANY,
+            ConnectionsLookup.REPORTED,
+            False,
+            pl.DataFrame(
+                {
+                    "node_as": ["input", "output"],
+                    "name": ["C", "A"],
+                    "idx": [2, 0],
+                    "group": ["C", "AB"],
+                    "notes": ["C is part of group C", "A is part of group AB"],
+                    "custom_index": [3, 1],
+                    "__node_index": [2, 0],
+                }
+            ),
+            id="name and group both any nodes",
+        ),
+        pytest.param(
+            {"name": "B", "group": "AB"},
+            NodeIs.ANY,
+            ConnectionsLookup.ALL,
+            True,
+            pl.DataFrame(
+                {
+                    "from_id": ["B", "A"],
+                    "to_id": ["C", "B"],
+                    "from": [1, 0],
+                    "to": [2, 1],
+                    "used": ["yes", "yes"],
+                    "paper": ["author et al., 2025", "author et al., 1998"],
+                    "strength": ["medium (1.0)", "weak (0.1)"],
+                    "__idx_from": [1, 0],
+                    "__idx_to": [2, 1],
+                }
+            ),
+            id="name and group both any all edges",
+        ),
+    ],
+)
+def test_direct_connection_info(
+    mini_G, node, node_as, connections_lookup, return_edges, expected
+) -> None:
+    """Return node or edge information from the requested lookup source."""
+    result = mini_G.direct_connection_info(
+        node,
+        node_as,
+        connections_lookup=connections_lookup,
+        return_edges=return_edges,
+    )
+    assert_frame_equal(result, expected, check_row_order=not return_edges)
+
+
+@pytest.mark.parametrize("return_edges", [False, True])
+def test_direct_connection_info_no_edge_info(mini_G, return_edges) -> None:
+    """Reject ALL in both output modes and allow a REPORTED retry."""
+    expected = mini_G.direct_connection_info(
+        {"name": "B"},
+        connections_lookup=ConnectionsLookup.REPORTED,
+        return_edges=return_edges,
+    )
+    mini_G.edge_info = None
+
+    with pytest.raises(
+        ConnectionLookupUnavailable,
+        match="No edge information available for ALL connections.",
+    ):
+        mini_G.direct_connection_info(
+            {"name": "B"},
+            connections_lookup=ConnectionsLookup.ALL,
+            return_edges=return_edges,
+        )
+
+    result = mini_G.direct_connection_info(
+        {"name": "B"},
+        connections_lookup=ConnectionsLookup.REPORTED,
+        return_edges=return_edges,
+    )
+    assert_frame_equal(result, expected, check_row_order=not return_edges)
+
+
+@pytest.mark.parametrize(
+    ("return_edges", "expected"),
+    [
+        pytest.param(
+            False,
+            pl.DataFrame(
+                schema={
+                    "node_as": pl.String,
+                    "name": pl.String,
+                    "idx": pl.Int64,
+                    "group": pl.String,
+                    "notes": pl.String,
+                    "custom_index": pl.Int64,
+                    "__node_index": pl.Int64,
+                }
+            ),
+            id="nodes",
+        ),
+        pytest.param(True, pl.DataFrame(), id="edges"),
+    ],
+)
+def test_direct_connection_info_empty(mini_G, return_edges, expected) -> None:
+    """Retain the output columns and types when there are no connections."""
+    mini_G.network.remove_edge(2, 3)  # so that D does not have connections
+    result = mini_G.direct_connection_info(
+        {"name": "D"}, return_edges=return_edges
+    )
+    assert_frame_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("node", "expected_count"),
+    [
+        pytest.param({"name": "missing"}, 0, id="invalid (missing)"),
+        pytest.param({"group": "AB"}, 2, id="invalid (not unique)"),
+    ],
+)
+def test_direct_connection_info_invalid(mini_G, node, expected_count) -> None:
+    """Reject missing or ambiguous identifiers using the backend message."""
+    with pytest.raises(
+        ValueError, match=f"^Expected 1 unique node, but got {expected_count}"
+    ):
+        mini_G.direct_connection_info(node)

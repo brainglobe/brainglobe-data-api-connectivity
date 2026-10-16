@@ -1,7 +1,10 @@
 import polars as pl
 import pytest
 
-from brainglobe_data_api_connectivity.connections import Connections
+from brainglobe_data_api_connectivity.connections import (
+    ConnectionLookupUnavailable,
+    Connections,
+)
 from brainglobe_data_api_connectivity.connections.query_opts import (
     ConnectionsLookup,
     NodeIs,
@@ -167,21 +170,25 @@ def test_direct_connection_between(
 
 
 def test_direct_connection_between_no_edge_info(mini_G):
-    """Test graph fallback when edge information is unavailable."""
+    """Reject ALL without edge information and allow a REPORTED retry."""
     mini_G.edge_info = None
 
-    with pytest.warns(
-        UserWarning,
-        match="No edge information available. "
-        "Using graph information instead.",
+    with pytest.raises(
+        ConnectionLookupUnavailable,
+        match="No edge information available for ALL connections.",
     ):
-        connections = mini_G.direct_connection_between(
+        mini_G.direct_connection_between(
             {"name": "A"},
             {"name": "C"},
             node0_as=NodeIs.ANY,
             connections_lookup=ConnectionsLookup.ALL,
         )
 
+    connections = mini_G.direct_connection_between(
+        {"name": "A"},
+        {"name": "C"},
+        connections_lookup=ConnectionsLookup.REPORTED,
+    )
     assert connections.shape == (1, 3)
 
 
