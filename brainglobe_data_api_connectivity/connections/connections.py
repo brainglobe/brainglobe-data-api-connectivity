@@ -896,7 +896,7 @@ class Connections:
 
         return pl.concat(connection_frames)
 
-    def common_connections(
+    def _common_connections(
         self,
         nodes: list[int],
         node_as: NodeIs = NodeIs.ANY,
@@ -1041,7 +1041,7 @@ class Connections:
             for node in nodes
         ]
 
-        common_indexes = self.common_connections(
+        common_indexes = self._common_connections(
             node_indexes,
             node_as=node_as,
             connections_lookup=ConnectionsLookup.ALL,
@@ -1073,7 +1073,7 @@ class Connections:
             for node in nodes
         ]
 
-        common_indexes = self.common_connections(
+        common_indexes = self._common_connections(
             node_indexes,
             node_as=node_as,
             connections_lookup=ConnectionsLookup.REPORTED,
@@ -1139,7 +1139,7 @@ class Connections:
         if node_indexes == []:
             return empty
 
-        common_indexes = self.common_connections(
+        common_indexes = self._common_connections(
             node_indexes,
             node_as=node_as,
             connections_lookup=connections_lookup,

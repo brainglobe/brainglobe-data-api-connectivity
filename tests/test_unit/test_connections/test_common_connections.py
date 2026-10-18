@@ -161,50 +161,10 @@ def test_common_connections_info_no_edge_info(mini_G) -> None:
 
 
 @pytest.mark.parametrize(
-    ("node_indices", "node_as", "expected"),
-    [
-        pytest.param(
-            [0, 1],
-            NodeIs.ANY,
-            [2],
-            id="common connections in either direction",
-        ),
-        pytest.param(
-            [0, 1], NodeIs.INPUT, [2], id="common output of nodes 0 and 1"
-        ),
-        pytest.param(
-            [1, 2], NodeIs.OUTPUT, [0], id="common input to nodes 1 and 2"
-        ),
-    ],
-)
-@pytest.mark.parametrize(
-    "connections_lookup",
-    [
-        pytest.param(ConnectionsLookup.ALL, id="all edge information"),
-        pytest.param(ConnectionsLookup.REPORTED, id="in network"),
-    ],
-)
-def test_common_connections(
-    mini_G,
-    node_indices,
-    node_as,
-    expected,
-    connections_lookup,
-) -> None:
-    """Return nodes directly connected to all given nodes."""
-    common = mini_G.common_connections(
-        node_indices,
-        node_as=node_as,
-        connections_lookup=connections_lookup,
-    )
-    assert common == expected
-
-
-@pytest.mark.parametrize(
     ("connections_lookup", "expected"),
     [
-        (ConnectionsLookup.ALL, [2, 3]),
-        (ConnectionsLookup.REPORTED, [2]),
+        pytest.param(ConnectionsLookup.ALL, [2, 3], id="ALL"),
+        pytest.param(ConnectionsLookup.REPORTED, [2], id="REPORTED"),
     ],
 )
 def test_common_connections_info_differs_from_network(
@@ -212,11 +172,16 @@ def test_common_connections_info_differs_from_network(
     connections_lookup,
     expected,
 ) -> None:
-    """Test common connections when edge info and network differ.
+    """Test common nodes when edge information and network differ.
 
-    In this test A and B both connect to D in `edge_info`, but these
-    connections are not present in the network. So D [3] is only a
-    common connection when querying all edge information."""
+    Verify that ConnectionsLookup.ALL can return common nodes that
+    ConnectionsLookup.REPORTED cannot, because those connections exist only in
+    edge_info, not in the graph.
+
+    Nodes 0 and 1 both connect to node 3 in edge_info, but these
+    connections are absent from the network. Node 3 is therefore
+    only common when querying ALL connections.
+    """
     extra_edges = pl.DataFrame(
         {
             "from_id": ["A", "B"],
@@ -233,14 +198,14 @@ def test_common_connections_info_differs_from_network(
 
     mini_G.edge_info = pl.concat([mini_G.edge_info, extra_edges])
 
-    assert (
-        mini_G.common_connections(
-            [0, 1],
-            node_as=NodeIs.INPUT,
-            connections_lookup=connections_lookup,
-        )
-        == expected
+    result = mini_G.common_connections_info(
+        [0, 1],
+        node_as=NodeIs.INPUT,
+        connections_lookup=connections_lookup,
+        return_edges=False,
     )
+
+    assert result["idx"].sort().to_list() == expected
 
 
 @pytest.mark.parametrize(
