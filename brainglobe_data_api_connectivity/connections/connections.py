@@ -1130,6 +1130,15 @@ class Connections:
             for node in nodes
         ]
 
+        # empty df with required schema
+        empty = self.node_information_from_index([]).insert_column(
+            0,
+            pl.Series("node_as", dtype=pl.String),
+        )
+
+        if node_indexes == []:
+            return empty
+
         common_indexes = self.common_connections(
             node_indexes,
             node_as=node_as,
@@ -1206,9 +1215,4 @@ class Connections:
         if nodes_info:
             return pl.concat(nodes_info)
 
-        # Return an empty DataFrame with the required columns.
-        node_df = self.node_information_from_index([])
-        return node_df.insert_column(
-            0,
-            pl.Series("node_as", dtype=pl.String),
-        )
+        return empty

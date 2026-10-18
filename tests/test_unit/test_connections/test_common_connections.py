@@ -171,6 +171,14 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             ],
             id="Nodes (mixed directions)",
         ),
+        pytest.param(
+            [],
+            NodeIs.ANY,
+            False,
+            ConnectionsLookup.REPORTED,
+            [],
+            id="Nodes (empty query)",
+        ),
     ],
 )
 def test_common_connections_info(
