@@ -275,4 +275,7 @@ def test_common_connections_nodes_directions(node_as, expected) -> None:
         return_edges=False,
     )
 
-    assert result.select("idx", "node_as").sort("idx").to_dicts() == expected
+    assert_frame_equal(
+        result.select("idx", "node_as").sort("idx"),
+        pl.DataFrame(expected),
+    )
