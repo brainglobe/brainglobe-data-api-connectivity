@@ -135,6 +135,42 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             [],
             id="No edges (input direction)",
         ),
+        pytest.param(
+            [1, 2],
+            NodeIs.OUTPUT,
+            False,
+            ConnectionsLookup.REPORTED,
+            [
+                {
+                    "node_as": "output",
+                    "name": "A",
+                    "idx": 0,
+                    "group": "AB",
+                    "notes": "A is part of group AB",
+                    "custom_index": 1,
+                    "__node_index": 0,
+                }
+            ],
+            id="Nodes (output direction)",
+        ),
+        pytest.param(
+            [0, 3],
+            NodeIs.ANY,
+            False,
+            ConnectionsLookup.REPORTED,
+            [
+                {
+                    "node_as": "mixed",
+                    "name": "C",
+                    "idx": 2,
+                    "group": "C",
+                    "notes": "C is part of group C",
+                    "custom_index": 3,
+                    "__node_index": 2,
+                }
+            ],
+            id="Nodes (mixed directions)",
+        ),
     ],
 )
 def test_common_connections_info(
