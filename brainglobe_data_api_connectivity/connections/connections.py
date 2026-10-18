@@ -1047,8 +1047,8 @@ class Connections:
             connections_lookup=ConnectionsLookup.ALL,
         )
 
-        outgoing = from_col.is_in(nodes) & to_col.is_in(common_indexes)
-        incoming = to_col.is_in(nodes) & from_col.is_in(common_indexes)
+        outgoing = from_col.is_in(node_indexes) & to_col.is_in(common_indexes)
+        incoming = to_col.is_in(node_indexes) & from_col.is_in(common_indexes)
 
         if node_as == NodeIs.INPUT:
             connection_filter = outgoing
