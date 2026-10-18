@@ -66,7 +66,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                     "__node_index": 2,
                 }
             ],
-            id="Nodes (all connections)",
+            id="Nodes using node dictionaries (all connections)",
         ),
         pytest.param(
             [0, 3],
