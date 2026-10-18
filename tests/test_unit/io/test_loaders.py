@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pooch
 import pytest
 from polars.testing import assert_frame_equal
@@ -60,16 +62,15 @@ def test_load_data_invalid_sex():
         load_data(sex="invalid")
 
 
-def test_load_refresh(tmp_path, mocker):
+def test_load_refresh():
     """Check that refresh replaces modified cached file."""
-
-    # Use a temporary cache.
-    mocker.patch.object(pooch, "os_cache", return_value=tmp_path)
 
     load_test_data()
 
     url = f"{gin_url()}test-data/small-nodes.csv"
-    cached_file = tmp_path / pooch.utils.unique_file_name(url)
+    cached_file = Path(pooch.os_cache("pooch")) / pooch.utils.unique_file_name(
+        url
+    )
     original_content = cached_file.read_text()
 
     # Modify the cached file.
