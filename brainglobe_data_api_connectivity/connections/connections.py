@@ -1205,13 +1205,21 @@ class Connections:
         nodes_info = []
 
         for source, node_list in node_as_col.items():
-            node_df = self.node_information_from_index(node_list)
+            if not node_list:
+                continue
 
-            if not node_df.is_empty():
-                node_df.insert_column(
-                    0,
-                    pl.Series("node_as", [source] * len(node_df)),
-                )
-                nodes_info.append(node_df)
+            # Add network indices even when node metadata is missing.
+            # Missing metadata columns will contain null values.
+            node_df = pl.DataFrame({"__node_index": node_list}).join(
+                self.node_information_from_index(node_list),
+                on="__node_index",
+                how="left",
+            )
+
+            node_df.insert_column(
+                0,
+                pl.Series("node_as", [source] * len(node_df)),
+            )
+            nodes_info.append(node_df)
 
         return pl.concat(nodes_info)

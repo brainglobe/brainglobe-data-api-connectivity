@@ -337,3 +337,43 @@ def test_common_connections_nodes_directions(node_as, expected) -> None:
         result.select("idx", "node_as").sort("idx"),
         pl.DataFrame(expected),
     )
+
+
+def test_common_connections_no_node_metadata():
+    """Return common node indices even when their metadata is missing.
+
+    Nodes 0 and 1 exist in the network and node metadata,
+    while node 3 exists only in edge_info.
+
+    Both nodes connect to node 3, making it a common connection
+    without corresponding node metadata.
+
+    Verify that its internal index and direction are preserved,
+    with null values for missing metadata.
+    """
+    graph = Connections(
+        node_info=pl.DataFrame({"idx": [0, 1, 2]}),
+        edge_table=[(0, 1, 1.0), (1, 0, 1.0)],
+        edge_info=pl.DataFrame(
+            {
+                "from": [0, 1],
+                "to": [3, 3],
+            }
+        ),
+    )
+
+    result = graph.common_connections_info(
+        [0, 1],
+        connections_lookup=ConnectionsLookup.ALL,
+    )
+
+    expected = pl.DataFrame(
+        {
+            "node_as": ["input"],
+            "__node_index": [3],
+            "idx": [None],
+        },
+        schema=result.schema,
+    )
+
+    assert_frame_equal(result, expected)
