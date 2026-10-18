@@ -1145,6 +1145,9 @@ class Connections:
             connections_lookup=connections_lookup,
         )
 
+        if common_indexes == []:
+            return empty
+
         # Group common nodes by their connection direction.
         node_as_col: dict = {"input": [], "output": [], "mixed": []}
 
@@ -1175,21 +1178,20 @@ class Connections:
                     )
 
                 else:
-                    inputs = {
-                        neighbour
-                        for node_idx in node_indexes
-                        for neighbour in self.network.successor_indices(
-                            node_idx
-                        )
-                    }
+                    inputs = set()
+                    outputs = set()
 
-                    outputs = {
-                        neighbour
-                        for node_idx in node_indexes
-                        for neighbour in self.network.predecessor_indices(
-                            node_idx
-                        )
-                    }
+                    if node_as != NodeIs.OUTPUT:
+                        for node_idx in node_indexes:
+                            inputs.update(
+                                self.network.successor_indices(node_idx)
+                            )
+
+                    if node_as != NodeIs.INPUT:
+                        for node_idx in node_indexes:
+                            outputs.update(
+                                self.network.predecessor_indices(node_idx)
+                            )
 
                 for common_idx in common_indexes:
                     if common_idx in inputs and common_idx in outputs:
