@@ -1,6 +1,7 @@
 """Load connectivity data from GIN."""
 
 from enum import StrEnum
+from pathlib import Path
 
 import pooch
 
@@ -8,7 +9,7 @@ from ..connections import Connections
 
 
 class Sex(StrEnum):
-    """Map case-insensitive sex inputs to 'f' or 'm' dataset suffixes."""
+    """Map accepted sex inputs to 'f' or 'm' dataset suffixes."""
 
     f = "f"
     female = "f"
@@ -21,18 +22,52 @@ def gin_url() -> str:
     return "https://gin.swc.ucl.ac.uk/brainglobe/data-api-connectivity/raw/master/"
 
 
-def load_test_data() -> Connections:
-    """Load the test connectivity dataset from GIN."""
-    path_node_info = pooch.retrieve(
+def _retrieve(url: str, refresh: bool = False) -> Path:
+    """Retrieve a file, optionally downloading a fresh copy.
+
+
+    Pooch does not provide a built-in force download option, so this private
+    helper adds that functionality by removing the cached file before
+    retrieval when requested.
+
+
+    Args:
+        url: URL of the file to retrieve.
+        refresh: If True, download a fresh copy instead of using the
+            cached file. Defaults to False.
+
+    Returns:
+        Path to the downloaded or cached file.
+    """
+    cache_path = Path(pooch.os_cache("pooch"))
+    filename = pooch.utils.unique_file_name(url)
+
+    if refresh:
+        (cache_path / filename).unlink(missing_ok=True)
+
+    return Path(pooch.retrieve(url=url))
+
+
+def load_test_data(refresh: bool = False) -> Connections:
+    """Load the test connectivity dataset from GIN.
+
+    Args:
+        refresh: If True, download fresh copies instead of using cached files.
+            Defaults to False.
+    """
+    path_node_info = _retrieve(
         url=f"{gin_url()}test-data/small-nodes.csv",
+        refresh=refresh,
     )
 
-    path_edge_table = pooch.retrieve(
+    path_edge_table = _retrieve(
         url=f"{gin_url()}test-data/small-edge-table.csv",
+        refresh=refresh,
     )
 
-    path_edge_info = pooch.retrieve(
+    path_edge_info = _retrieve(
         url=f"{gin_url()}test-data/small-edge-meta.csv",
+        refresh=refresh,
     )
 
     return Connections.from_files(
@@ -42,7 +77,7 @@ def load_test_data() -> Connections:
     )
 
 
-def load_data(sex: str = "f") -> Connections:
+def load_data(sex: str = "f", refresh: bool = False) -> Connections:
     """Load data from GIN for the requested sex.
 
     Loads a Connections object from GIN, constructed from CSV files
@@ -58,7 +93,11 @@ def load_data(sex: str = "f") -> Connections:
         e2519768122. https://doi.org/10.1073/pnas.2519768122
 
     Args:
-        sex: "f", "female" (default), "m", or "male".
+        sex: Sex of the dataset. Accepts "f" or "female", and "m" or
+            "male". Defaults to "f".
+        refresh: Whether to download fresh copies instead of using
+            cached files. Defaults to False.
+
 
     Raises:
         ValueError: If sex is not one of the supported values.
@@ -73,16 +112,19 @@ def load_data(sex: str = "f") -> Connections:
     dataset = f"CNS2{sex_suffix}"
     dataset_url = f"{gin_url()}data/{dataset}/{dataset}"
 
-    path_node_info = pooch.retrieve(
+    path_node_info = _retrieve(
         url=f"{dataset_url}_node_info.csv",
+        refresh=refresh,
     )
 
-    path_edge_table = pooch.retrieve(
+    path_edge_table = _retrieve(
         url=f"{dataset_url}_edge_table.csv",
+        refresh=refresh,
     )
 
-    path_edge_info = pooch.retrieve(
+    path_edge_info = _retrieve(
         url=f"{dataset_url}_edge_info.csv",
+        refresh=refresh,
     )
 
     return Connections.from_files(
