@@ -1004,19 +1004,6 @@ class Connections:
         """
         self.is_connection_lookup_available(connections_lookup)
 
-        node_indexes = [
-            self._get_unique_node_index(node)
-            if isinstance(node, dict)
-            else node
-            for node in nodes
-        ]
-
-        common_indexes = self.common_connections(
-            node_indexes,
-            node_as=node_as,
-            connections_lookup=connections_lookup,
-        )
-
         if return_edges:
             if connections_lookup == ConnectionsLookup.ALL:
                 return self._common_connections_from_edge_info(
@@ -1029,8 +1016,11 @@ class Connections:
                 node_as,
             )
 
-        # Return node info
-        return self.node_information_from_index(common_indexes)
+        return self._common_connections_nodes(
+            nodes,
+            connections_lookup,
+            node_as,
+        )
 
     def _common_connections_from_edge_info(
         self,
@@ -1124,3 +1114,101 @@ class Connections:
             results.append({"from": from_id, "to": to_id, "value": edge_data})
 
         return pl.DataFrame(results)
+
+    def _common_connections_nodes(
+        self,
+        nodes: list[int] | list[dict[str, str | int]],
+        connections_lookup: ConnectionsLookup,
+        node_as: NodeIs,
+    ) -> pl.DataFrame:
+        """Return common node information, labelled by the node's role."""
+
+        node_indexes = [
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+            for node in nodes
+        ]
+
+        common_indexes = self.common_connections(
+            node_indexes,
+            node_as=node_as,
+            connections_lookup=connections_lookup,
+        )
+
+        # Group common nodes by their connection direction.
+        node_as_col: dict = {"input": [], "output": [], "mixed": []}
+
+        if common_indexes:
+            if node_as == NodeIs.INPUT:
+                node_as_col["input"] = common_indexes
+
+            elif node_as == NodeIs.OUTPUT:
+                node_as_col["output"] = common_indexes
+
+            else:
+                if connections_lookup == ConnectionsLookup.ALL:
+                    self.edge_info: pl.DataFrame
+                    inputs = set(
+                        self.edge_info.filter(
+                            pl.col(self._edge_info_from_index_col).is_in(
+                                node_indexes
+                            )
+                        ).get_column(self._edge_info_to_index_col)
+                    )
+
+                    outputs = set(
+                        self.edge_info.filter(
+                            pl.col(self._edge_info_to_index_col).is_in(
+                                node_indexes
+                            )
+                        ).get_column(self._edge_info_from_index_col)
+                    )
+
+                else:
+                    inputs = {
+                        neighbour
+                        for node_idx in node_indexes
+                        for neighbour in self.network.successor_indices(
+                            node_idx
+                        )
+                    }
+
+                    outputs = {
+                        neighbour
+                        for node_idx in node_indexes
+                        for neighbour in self.network.predecessor_indices(
+                            node_idx
+                        )
+                    }
+
+                for common_idx in common_indexes:
+                    if common_idx in inputs and common_idx in outputs:
+                        node_as_col["mixed"].append(common_idx)
+                    elif common_idx in inputs:
+                        node_as_col["input"].append(common_idx)
+                    else:
+                        node_as_col["output"].append(common_idx)
+
+        # Return node information, grouped by direction.
+        nodes_info = []
+
+        for source, node_list in node_as_col.items():
+            node_df = self.node_information_from_index(node_list)
+
+            if not node_df.is_empty():
+                node_df.insert_column(
+                    0,
+                    pl.Series("node_as", [source] * len(node_df)),
+                )
+                nodes_info.append(node_df)
+
+        if nodes_info:
+            return pl.concat(nodes_info)
+
+        # Return an empty DataFrame with the required columns.
+        node_df = self.node_information_from_index([])
+        return node_df.insert_column(
+            0,
+            pl.Series("node_as", dtype=pl.String),
+        )

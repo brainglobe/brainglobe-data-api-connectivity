@@ -28,6 +28,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             ConnectionsLookup.REPORTED,
             [
                 {
+                    "node_as": "input",
                     "name": "C",
                     "idx": 2,
                     "group": "C",
@@ -56,6 +57,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             ConnectionsLookup.ALL,
             [
                 {
+                    "node_as": "input",
                     "name": "C",
                     "idx": 2,
                     "group": "C",
@@ -73,6 +75,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             ConnectionsLookup.REPORTED,
             [
                 {
+                    "node_as": "input",
                     "name": "C",
                     "idx": 2,
                     "group": "C",
