@@ -45,7 +45,13 @@ def _retrieve(url: str, refresh: bool = False) -> Path:
     if refresh:
         (cache_path / filename).unlink(missing_ok=True)
 
-    return Path(pooch.retrieve(url=url))
+    return Path(
+        pooch.retrieve(
+            url=url,
+            path=cache_path,
+            fname=filename,
+        )
+    )
 
 
 def load_test_data(refresh: bool = False) -> Connections:

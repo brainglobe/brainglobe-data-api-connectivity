@@ -1,8 +1,10 @@
+import pooch
 import pytest
 from polars.testing import assert_frame_equal
 
 from brainglobe_data_api_connectivity.connections import Connections
 from brainglobe_data_api_connectivity.io.loaders import (
+    gin_url,
     load_data,
     load_test_data,
 )
@@ -56,3 +58,28 @@ def test_load_data_invalid_sex():
     """Reject unsupported sex values before attempting a download."""
     with pytest.raises(ValueError, match="sex must be"):
         load_data(sex="invalid")
+
+
+def test_load_refresh(tmp_path, mocker):
+    """Check that refresh replaces modified cached file."""
+
+    # Use a temporary cache.
+    mocker.patch.object(pooch, "os_cache", return_value=tmp_path)
+
+    load_test_data()
+
+    url = f"{gin_url()}test-data/small-nodes.csv"
+    cached_file = tmp_path / pooch.utils.unique_file_name(url)
+    original_content = cached_file.read_text()
+
+    # Modify the cached file.
+    modified_content = original_content.replace("alpha", "modified_alpha")
+    cached_file.write_text(modified_content)
+
+    # Without refresh, the modified file stays cached.
+    load_test_data(refresh=False)
+    assert cached_file.read_text() == modified_content
+
+    # With refresh, the original file is downloaded again.
+    load_test_data(refresh=True)
+    assert cached_file.read_text() == original_content
