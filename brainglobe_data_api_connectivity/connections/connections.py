@@ -1214,7 +1214,4 @@ class Connections:
                 )
                 nodes_info.append(node_df)
 
-        if nodes_info:
-            return pl.concat(nodes_info)
-
-        return empty
+        return pl.concat(nodes_info)
