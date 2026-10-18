@@ -320,3 +320,73 @@ def test_common_connections_info_differs_from_network(
         )
         == expected
     )
+
+
+@pytest.mark.parametrize(
+    ("node_as", "expected"),
+    [
+        pytest.param(
+            NodeIs.INPUT,
+            [
+                {"idx": 2, "node_as": "input"},
+            ],
+            id="INPUT",
+        ),
+        pytest.param(
+            NodeIs.OUTPUT,
+            [
+                {"idx": 4, "node_as": "output"},
+            ],
+            id="OUTPUT",
+        ),
+        pytest.param(
+            NodeIs.ANY,
+            [
+                {"idx": 2, "node_as": "input"},
+                {"idx": 3, "node_as": "mixed"},
+                {"idx": 4, "node_as": "output"},
+            ],
+            id="ANY",
+        ),
+    ],
+)
+def test_common_connections_nodes_directions(node_as, expected) -> None:
+    """Test common nodes classified by their connection direction.
+
+    Representation of the network with nodes 0, 1, 2, 3, and 4:
+
+       (0) ──────> (2) <───── (1)
+        ^                       ^
+        │                       │
+        └──────── (4) ──────────┘
+
+        (0) ──────> (3) ──────> (1)
+
+    When querying common connections of nodes 0 and 1:
+    INPUT:  Both queried nodes are inputs to node 2.
+    OUTPUT: Both queried nodes are outputs of node 4.
+    ANY:    Nodes 2, 3, and 4 are common connections.
+            Node 2 is input, node 4 is output, and node 3 is mixed
+            because node 0 is its input and node 1 is its output.
+
+    """
+
+    graph = Connections(
+        node_info=pl.DataFrame({"idx": [0, 1, 2, 3, 4]}),
+        edge_table=[
+            (0, 2, 1.0),
+            (1, 2, 1.0),
+            (4, 0, 1.0),
+            (4, 1, 1.0),
+            (0, 3, 1.0),
+            (3, 1, 1.0),
+        ],
+    )
+
+    result = graph.common_connections_info(
+        [0, 1],
+        node_as=node_as,
+        return_edges=False,
+    )
+
+    assert result.select("idx", "node_as").sort("idx").to_dicts() == expected
