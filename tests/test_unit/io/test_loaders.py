@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pooch
 import pytest
 from polars.testing import assert_frame_equal
@@ -10,6 +8,16 @@ from brainglobe_data_api_connectivity.io.loaders import (
     load_data,
     load_test_data,
 )
+
+
+@pytest.fixture(autouse=True)
+def mock_cache(tmp_path, mocker):
+    """Use a separate temporary cache for each test.
+
+    This prevents tests from affecting each other's cached files.
+    """
+    mocker.patch.object(pooch, "os_cache", return_value=tmp_path)
+    return tmp_path
 
 
 def test_load_test_data(DATA_DIR):
@@ -36,6 +44,7 @@ def test_load_test_data(DATA_DIR):
         pytest.param("f", 48146, id="f"),
         pytest.param("female", 48146, id="female"),
         pytest.param("m", 323514, id="m"),
+        pytest.param("male", 323514, id="male"),
     ],
 )
 def test_load_data(sex, edge_info_rows):
@@ -56,25 +65,24 @@ def test_load_data_default_sex():
     assert loaded_data.edge_info.height == 48146
 
 
-def test_load_data_invalid_sex():
+@pytest.mark.parametrize("sex", ["invalid", "F", "Female", "M", "Male", ""])
+def test_load_data_invalid_sex(sex):
     """Reject unsupported sex values before attempting a download."""
     with pytest.raises(ValueError, match="sex must be"):
-        load_data(sex="invalid")
+        load_data(sex=sex)
 
 
-def test_load_refresh():
-    """Check that refresh replaces modified cached file."""
-
+def test_load_refresh(mock_cache):
+    """Check that refresh replaces a modified cached file."""
     load_test_data()
 
     url = f"{gin_url()}test-data/small-nodes.csv"
-    cached_file = Path(pooch.os_cache("pooch")) / pooch.utils.unique_file_name(
-        url
-    )
+    cached_file = mock_cache / pooch.utils.unique_file_name(url)
     original_content = cached_file.read_text()
 
     # Modify the cached file.
     modified_content = original_content.replace("alpha", "modified_alpha")
+    assert modified_content != original_content
     cached_file.write_text(modified_content)
 
     # Without refresh, the modified file stays cached.
