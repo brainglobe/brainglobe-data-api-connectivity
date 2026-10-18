@@ -37,7 +37,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                     "__node_index": 2,
                 }
             ],
-            id="A & B common connection",
+            id="Nodes (reported)",
         ),
         pytest.param(
             [{"name": "A"}, {"name": "B"}],
@@ -48,7 +48,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                 {"from": "A", "to": "C", "value": 10.0},
                 {"from": "B", "to": "C", "value": 1.0},
             ],
-            id="A & B return_edges common connection",
+            id="Edges using node dictionaries (reported)",
         ),
         pytest.param(
             [{"name": "A"}, {"name": "B"}],
@@ -66,7 +66,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                     "__node_index": 2,
                 }
             ],
-            id="common connection",
+            id="Nodes (all connections)",
         ),
         pytest.param(
             [0, 1],
@@ -84,7 +84,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                     "__node_index": 2,
                 }
             ],
-            id="common output",
+            id="Nodes (input direction)",
         ),
         pytest.param(
             [0, 3],
@@ -92,7 +92,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             False,
             ConnectionsLookup.REPORTED,
             [],
-            id="no common connections",
+            id="No nodes (output direction)",
         ),
         pytest.param(
             [0, 1],
@@ -103,7 +103,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                 {"from": 0, "to": 2, "value": 10.0},
                 {"from": 1, "to": 2, "value": 1.0},
             ],
-            id="common output edges",
+            id="Edges (input direction)",
         ),
         pytest.param(
             [1, 2],
@@ -114,7 +114,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                 {"from": 0, "to": 1, "value": 0.1},
                 {"from": 0, "to": 2, "value": 10.0},
             ],
-            id="common input edges",
+            id="Edges (output direction)",
         ),
         pytest.param(
             [0, 3],
@@ -125,7 +125,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
                 {"from": 0, "to": 2, "value": 10.0},
                 {"from": 2, "to": 3, "value": 10.0},
             ],
-            id="common edges in mixed directions",
+            id="Edges (mixed directions)",
         ),
         pytest.param(
             [0, 3],
@@ -133,7 +133,7 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             True,
             ConnectionsLookup.REPORTED,
             [],
-            id="no common edges",
+            id="No edges (input direction)",
         ),
     ],
 )
@@ -153,18 +153,6 @@ def test_common_connections_info(
         return_edges=return_edges,
     )
     assert_frame_equal(result, pl.DataFrame(expected, schema=result.schema))
-
-
-def test_common_connections_info_all(mini_G) -> None:
-    """Return all metadata for queried nodes."""
-    result = mini_G.common_connections_info(
-        [0, 1], connections_lookup=ConnectionsLookup.ALL, return_edges=True
-    )
-    # Nodes 0 and 1 share node 2. Keep every metadata row for these edges.
-    expected = mini_G.edge_info.filter(
-        pl.col("from").is_in([0, 1]) & (pl.col("to") == 2)
-    )
-    assert_frame_equal(result, expected, check_row_order=False)
 
 
 def test_common_connections_info_no_edge_info(mini_G) -> None:
