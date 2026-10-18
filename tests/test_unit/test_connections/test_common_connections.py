@@ -2,7 +2,10 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from brainglobe_data_api_connectivity.connections import Connections
+from brainglobe_data_api_connectivity.connections import (
+    ConnectionLookupUnavailable,
+    Connections,
+)
 from brainglobe_data_api_connectivity.connections.query_opts import (
     ConnectionsLookup,
     NodeIs,
@@ -10,11 +13,47 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
 
 
 @pytest.mark.parametrize(
-    ("query_nodes", "node_as", "expected"),
+    (
+        "query_nodes",
+        "node_as",
+        "return_edges",
+        "connections_lookup",
+        "expected",
+    ),
     [
         pytest.param(
             [0, 1],
             NodeIs.ANY,
+            False,
+            ConnectionsLookup.REPORTED,
+            [
+                {
+                    "name": "C",
+                    "idx": 2,
+                    "group": "C",
+                    "notes": "C is part of group C",
+                    "custom_index": 3,
+                    "__node_index": 2,
+                }
+            ],
+            id="A & B common connection",
+        ),
+        pytest.param(
+            [{"name": "A"}, {"name": "B"}],
+            NodeIs.ANY,
+            True,
+            ConnectionsLookup.REPORTED,
+            [
+                {"from": "A", "to": "C", "value": 10.0},
+                {"from": "B", "to": "C", "value": 1.0},
+            ],
+            id="A & B return_edges common connection",
+        ),
+        pytest.param(
+            [{"name": "A"}, {"name": "B"}],
+            NodeIs.ANY,
+            False,
+            ConnectionsLookup.ALL,
             [
                 {
                     "name": "C",
@@ -30,6 +69,8 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
         pytest.param(
             [0, 1],
             NodeIs.INPUT,
+            False,
+            ConnectionsLookup.REPORTED,
             [
                 {
                     "name": "C",
@@ -45,25 +86,16 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
         pytest.param(
             [0, 3],
             NodeIs.OUTPUT,
+            False,
+            ConnectionsLookup.REPORTED,
             [],
             id="no common connections",
         ),
-    ],
-)
-def test_common_connections_info(
-    mini_G, query_nodes, node_as, expected
-) -> None:
-    """Return node information for common connections."""
-    result = mini_G.common_connections_node_info(query_nodes, node_as=node_as)
-    assert result.to_dicts() == expected
-
-
-@pytest.mark.parametrize(
-    ("query_nodes", "node_as", "expected_edges"),
-    [
         pytest.param(
             [0, 1],
             NodeIs.INPUT,
+            True,
+            ConnectionsLookup.REPORTED,
             [
                 {"from": 0, "to": 2, "value": 10.0},
                 {"from": 1, "to": 2, "value": 1.0},
@@ -73,6 +105,8 @@ def test_common_connections_info(
         pytest.param(
             [1, 2],
             NodeIs.OUTPUT,
+            True,
+            ConnectionsLookup.REPORTED,
             [
                 {"from": 0, "to": 1, "value": 0.1},
                 {"from": 0, "to": 2, "value": 10.0},
@@ -82,36 +116,46 @@ def test_common_connections_info(
         pytest.param(
             [0, 3],
             NodeIs.ANY,
+            True,
+            ConnectionsLookup.REPORTED,
             [
-                {"from": 0, "to": 2, "value": 10},
-                {"from": 2, "to": 3, "value": 10},
+                {"from": 0, "to": 2, "value": 10.0},
+                {"from": 2, "to": 3, "value": 10.0},
             ],
             id="common edges in mixed directions",
         ),
         pytest.param(
             [0, 3],
             NodeIs.INPUT,
+            True,
+            ConnectionsLookup.REPORTED,
             [],
-            id="no common connections",
+            id="no common edges",
         ),
     ],
 )
-def test_common_connections_edge_info(
-    mini_G, query_nodes, node_as, expected_edges
+def test_common_connections_info(
+    mini_G,
+    query_nodes,
+    node_as,
+    return_edges,
+    connections_lookup,
+    expected,
 ) -> None:
-    """Return matching edge information with the requested direction."""
-    result = mini_G.common_connections_edge_info(
+    """Return node or edge information for common connections."""
+    result = mini_G.common_connections_info(
         query_nodes,
         node_as=node_as,
+        connections_lookup=connections_lookup,
+        return_edges=return_edges,
     )
-    expected = pl.DataFrame(expected_edges)
-    assert_frame_equal(result, expected, check_row_order=False)
+    assert_frame_equal(result, pl.DataFrame(expected, schema=result.schema))
 
 
-def test_common_connections_edge_info_all(mini_G) -> None:
+def test_common_connections_info_all(mini_G) -> None:
     """Return all metadata for queried nodes."""
-    result = mini_G.common_connections_edge_info(
-        [0, 1], connections_lookup=ConnectionsLookup.ALL
+    result = mini_G.common_connections_info(
+        [0, 1], connections_lookup=ConnectionsLookup.ALL, return_edges=True
     )
     # Nodes 0 and 1 share node 2. Keep every metadata row for these edges.
     expected = mini_G.edge_info.filter(
@@ -120,17 +164,19 @@ def test_common_connections_edge_info_all(mini_G) -> None:
     assert_frame_equal(result, expected, check_row_order=False)
 
 
-def test_common_connections_edge_info_no_edge_info(mini_G) -> None:
-    """Fall back to graph edges when edge metadata is unavailable."""
+def test_common_connections_info_no_edge_info(mini_G) -> None:
+    """Raise when ALL is requested but edge metadata is unavailable."""
     mini_G.edge_info = None
-    with pytest.warns(UserWarning, match="No edge information available"):
-        result = mini_G.common_connections_edge_info(
-            [0, 1], connections_lookup=ConnectionsLookup.ALL
+
+    with pytest.raises(
+        ConnectionLookupUnavailable,
+        match="No edge information available",
+    ):
+        mini_G.common_connections_info(
+            [0, 1],
+            connections_lookup=ConnectionsLookup.ALL,
+            return_edges=True,
         )
-    expected = pl.DataFrame(
-        {"from": [0, 1], "to": [2, 2], "value": [10.0, 1.0]}
-    )
-    assert_frame_equal(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -205,7 +251,7 @@ def test_common_connections_direction_examples(edge_table, node_as) -> None:
         (ConnectionsLookup.REPORTED, [2]),
     ],
 )
-def test_common_connections_edge_info_differs_from_network(
+def test_common_connections_info_differs_from_network(
     mini_G,
     connections_lookup,
     expected,

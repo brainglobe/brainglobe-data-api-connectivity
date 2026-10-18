@@ -963,48 +963,164 @@ class Connections:
 
         return common_connections
 
-    def common_connections_node_info(
+    def common_connections_info(
         self,
-        nodes: list[int],
+        nodes: list[int] | list[dict[str, str | int]],
         node_as: NodeIs = NodeIs.ANY,
         connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
+        return_edges: bool = False,
     ) -> pl.DataFrame:
-        """Return all node metadata for common directly connected nodes."""
+        """Get node or edge information for common direct connections.
+
+        Accepts internal node indexes or metadata identifying unique nodes.
+        Both output modes use the requested connection lookup source.
+
+        Args:
+            nodes: list[int] | list[dict[str, str | int]]
+                Internal indexes or node metadata to identify queried nodes.
+            node_as: NodeIs
+                Role of the queried nodes: input, output, or either.
+            connections_lookup: ConnectionsLookup
+                Source from which to find connections. ALL uses edge metadata,
+                which must be available.
+            return_edges: bool
+                If True, return edge information instead of node information.
+
+        Returns:
+            pl.DataFrame
+                By default, metadata for common directly connected nodes,
+                including internal indexes.
+                With `return_edges=True`, source/target indexes and weights
+                for REPORTED, or all edge metadata for ALL.
+                Empty node results retain their columns; empty edge results
+                retain the metadata schema for ALL, or have no columns for
+                REPORTED.
+
+        Raises:
+            ConnectionLookupUnavailable:
+                If ALL is requested but edge information is unavailable.
+            ValueError:
+                If a metadata dictionary does not identify exactly one node.
+        """
+        self.is_connection_lookup_available(connections_lookup)
+
+        node_indexes = [
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+            for node in nodes
+        ]
+
         common_indexes = self.common_connections(
-            nodes,
+            node_indexes,
             node_as=node_as,
             connections_lookup=connections_lookup,
         )
+
+        if return_edges:
+            if connections_lookup == ConnectionsLookup.ALL:
+                return self._common_connections_from_edge_info(
+                    nodes,
+                    node_as,
+                )
+
+            return self._common_connections_from_network(
+                nodes,
+                node_as,
+            )
+
+        # Return node info
         return self.node_information_from_index(common_indexes)
 
-    def common_connections_edge_info(
+    def _common_connections_from_edge_info(
         self,
-        nodes: list[int],
+        nodes: list[int] | list[dict[str, str | int]],
         node_as: NodeIs = NodeIs.ANY,
-        connections_lookup: ConnectionsLookup = ConnectionsLookup.REPORTED,
     ) -> pl.DataFrame:
-        """Return edge information for common directly connected nodes."""
-        connections_lookup = self._get_available_connection_lookup(
-            connections_lookup
-        )
-        common_indexes = self.common_connections(
-            nodes,
-            node_as=node_as,
-            connections_lookup=connections_lookup,
-        )
-        connection_frames = [
-            self.direct_connection_between(
-                node,
-                common_index,
-                connections_lookup=connections_lookup,
-                node0_as=node_as,
-            )
-            for node in nodes
-            for common_index in common_indexes
-        ]
-        if not connection_frames:
-            return pl.DataFrame()
+        """Return common connections from `edge_info`."""
 
-        return pl.concat(connection_frames, how="vertical_relaxed").unique(
-            maintain_order=True
+        self.edge_info: pl.DataFrame
+
+        from_col = pl.col(self._edge_info_from_index_col)
+        to_col = pl.col(self._edge_info_to_index_col)
+
+        node_indexes = [
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+            for node in nodes
+        ]
+
+        common_indexes = self.common_connections(
+            node_indexes,
+            node_as=node_as,
+            connections_lookup=ConnectionsLookup.ALL,
         )
+
+        outgoing = from_col.is_in(nodes) & to_col.is_in(common_indexes)
+        incoming = to_col.is_in(nodes) & from_col.is_in(common_indexes)
+
+        if node_as == NodeIs.INPUT:
+            connection_filter = outgoing
+        elif node_as == NodeIs.OUTPUT:
+            connection_filter = incoming
+        else:
+            connection_filter = outgoing | incoming
+
+        return self.edge_info.filter(connection_filter)
+
+    def _common_connections_from_network(
+        self,
+        nodes: list[int] | list[dict[str, str | int]],
+        node_as: NodeIs,
+    ) -> pl.DataFrame:
+        """Return common connections from the network."""
+
+        node_indexes = [
+            self._get_unique_node_index(node)
+            if isinstance(node, dict)
+            else node
+            for node in nodes
+        ]
+
+        common_indexes = self.common_connections(
+            node_indexes,
+            node_as=node_as,
+            connections_lookup=ConnectionsLookup.REPORTED,
+        )
+
+        connections = []
+
+        for node_idx in node_indexes:
+            for common_idx in common_indexes:
+                if node_as != NodeIs.OUTPUT:
+                    if self.network.has_edge(node_idx, common_idx):
+                        connections.append((node_idx, common_idx))
+
+                if node_as != NodeIs.INPUT:
+                    if self.network.has_edge(common_idx, node_idx):
+                        connections.append((common_idx, node_idx))
+
+        # Remove duplicate connections, including feedback loops
+        edges = dict.fromkeys(connections)
+
+        results = []
+
+        for from_idx, to_idx in edges:
+            edge_data = self.network.get_edge_data(from_idx, to_idx)
+
+            if nodes and isinstance(nodes[0], dict):
+                key = next(iter(nodes[0]))
+
+                from_info = self.node_information_from_index([from_idx])
+                to_info = self.node_information_from_index([to_idx])
+
+                from_id = from_info[key][0]
+                to_id = to_info[key][0]
+            else:
+                from_id = from_idx
+                to_id = to_idx
+
+            results.append({"from": from_id, "to": to_id, "value": edge_data})
+
+        return pl.DataFrame(results)
