@@ -94,6 +94,22 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
         ),
         pytest.param(
             [{"name": "A"}, {"name": "B"}],
+            NodeIs.OUTPUT,
+            True,
+            ConnectionsLookup.ALL,
+            [],
+            id="Edges (common output) (all connections)",
+        ),
+        pytest.param(
+            [{"name": "A"}, {"name": "C"}],
+            NodeIs.INPUT,
+            True,
+            ConnectionsLookup.ALL,
+            [],
+            id="Edges (common input) (all connections)",
+        ),
+        pytest.param(
+            [{"name": "A"}, {"name": "B"}],
             NodeIs.ANY,
             False,
             ConnectionsLookup.ALL,
