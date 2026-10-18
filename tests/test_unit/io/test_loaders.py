@@ -10,7 +10,7 @@ from brainglobe_data_api_connectivity.io.loaders import (
 )
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_cache(tmp_path, mocker):
     """Use a separate temporary cache for each test.
 
