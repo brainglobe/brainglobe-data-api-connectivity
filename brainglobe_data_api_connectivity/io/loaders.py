@@ -4,10 +4,6 @@ import pooch
 
 from ..connections import Connections
 
-GIN_URL = (
-    "https://gin.swc.ucl.ac.uk/brainglobe/data-api-connectivity/raw/master/"
-)
-
 SEX_SUFFIXES = {
     "f": "f",
     "female": "f",
@@ -16,18 +12,23 @@ SEX_SUFFIXES = {
 }
 
 
+def gin_url() -> str:
+    """Return the base URL for connectivity data hosted on GIN."""
+    return "https://gin.swc.ucl.ac.uk/brainglobe/data-api-connectivity/raw/master/"
+
+
 def load_test_data() -> Connections:
     """Load the test connectivity dataset from GIN."""
     path_node_info = pooch.retrieve(
-        url=f"{GIN_URL}test-data/small-nodes.csv",
+        url=f"{gin_url()}test-data/small-nodes.csv",
     )
 
     path_edge_table = pooch.retrieve(
-        url=f"{GIN_URL}test-data/small-edge-table.csv",
+        url=f"{gin_url()}test-data/small-edge-table.csv",
     )
 
     path_edge_info = pooch.retrieve(
-        url=f"{GIN_URL}test-data/small-edge-meta.csv",
+        url=f"{gin_url()}test-data/small-edge-meta.csv",
     )
 
     return Connections.from_files(
@@ -66,7 +67,7 @@ def load_data(sex: str = "F") -> Connections:
         raise ValueError('sex must be "F", "female", "M", or "male".')
 
     dataset = f"CNS2{SEX_SUFFIXES[sex]}"
-    dataset_url = f"{GIN_URL}data/{dataset}/{dataset}"
+    dataset_url = f"{gin_url()}data/{dataset}/{dataset}"
 
     path_node_info = pooch.retrieve(
         url=f"{dataset_url}_node_info.csv",
