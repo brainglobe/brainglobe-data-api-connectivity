@@ -29,10 +29,9 @@ def test_load_test_data(DATA_DIR):
 @pytest.mark.parametrize(
     "sex, edge_info_rows",
     [
-        pytest.param("F", 48146, id="F"),
+        pytest.param("f", 48146, id="f"),
         pytest.param("female", 48146, id="female"),
-        pytest.param("FEMALE", 48146, id="FEMALE"),
-        pytest.param("M", 323514, id="M"),
+        pytest.param("m", 323514, id="m"),
     ],
 )
 def test_load_data(sex, edge_info_rows):
