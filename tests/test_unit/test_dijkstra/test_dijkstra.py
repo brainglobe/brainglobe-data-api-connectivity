@@ -1,8 +1,8 @@
 import pytest
 from rustworkx import PyDiGraph
 
-from brainglobe_data_api_connectivity.dijkstra import dijkstra
-from brainglobe_data_api_connectivity.dijkstra.strategy import (
+from brainglobe_data_api_connectivity.search_algorithms import dijkstra
+from brainglobe_data_api_connectivity.search_algorithms.strategy import (
     DijkstraStrategy,
     FewestSteps,
     WeakestTotalWeight,
