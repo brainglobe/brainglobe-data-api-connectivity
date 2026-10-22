@@ -645,7 +645,7 @@ class Connections:
         ):
             node_df = self.node_information_from_index(node_list)
             if len(node_df) > 0:
-                node_df.insert_column(0, pl.Series("node_as", [source]))
+                node_df.insert_column(0, pl.lit(source).alias("node_as"))
                 nodes_info.append(node_df)
 
         if len(nodes_info) > 0:

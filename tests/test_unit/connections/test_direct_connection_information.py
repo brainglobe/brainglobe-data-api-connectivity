@@ -152,6 +152,24 @@ from brainglobe_data_api_connectivity.connections.query_opts import (
             ),
             id="name and group both any all edges",
         ),
+        pytest.param(
+            {"name": "A"},
+            NodeIs.INPUT,
+            ConnectionsLookup.REPORTED,
+            False,
+            pl.DataFrame(
+                {
+                    "node_as": ["input", "input"],
+                    "name": ["B", "C"],
+                    "idx": [1, 2],
+                    "group": ["AB", "C"],
+                    "notes": ["B is part of group AB", "C is part of group C"],
+                    "custom_index": [2, 3],
+                    "__node_index": [1, 2],
+                }
+            ),
+            id="Return_edges=False with multiple input rows returned",
+        ),
     ],
 )
 def test_direct_connection_info(
