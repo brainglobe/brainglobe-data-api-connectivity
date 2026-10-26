@@ -54,12 +54,17 @@ def _retrieve(file_path: str, refresh: bool = False) -> Path:
     Returns:
         Path to the downloaded or cached file.
     """
+    if refresh:
+        (GIN_REPO.abspath / file_path).unlink(missing_ok=True)
 
     return GIN_REPO.fetch(file_path)
 
 
 def load_test_data(refresh: bool = False) -> Connections:
     """Load the test connectivity dataset from GIN.
+
+    CSV files are downloaded to pooch's default cache directory, which can be
+    changed by setting the environment variable: NEUROME_DATA_DIR.
 
     Args:
         refresh: If True, download fresh copies instead of using cached files.
@@ -94,6 +99,9 @@ def load_data(sex: str = "f", refresh: bool = False) -> Connections:
     derived from the supplementary Excel datasets of Swanson et al. (2025).
     The CSV representation provides a more manageable format for working
     with the original large Excel datasets.
+
+    CSV files are downloaded to pooch's default cache directory, which can be
+    changed by setting the environment variable: NEUROME_DATA_DIR.
 
     Reference:
         Swanson, L. W., Hahn, J. D., & Sporns, O. (2025).
