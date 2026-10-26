@@ -20,7 +20,17 @@ class Sex(StrEnum):
 GIN_REPO = pooch.create(
     path=pooch.os_cache("pooch"),
     base_url="https://gin.swc.ucl.ac.uk/brainglobe/data-api-connectivity/raw/master/",
-    registry=None,
+    registry={
+        "test-data/small-nodes.csv": None,
+        "test-data/small-edge-table.csv": None,
+        "test-data/small-edge-meta.csv": None,
+        "data/CNS2f/CNS2f_node_info.csv": None,
+        "data/CNS2f/CNS2f_edge_table.csv": None,
+        "data/CNS2f/CNS2f_edge_info.csv": None,
+        "data/CNS2m/CNS2m_node_info.csv": None,
+        "data/CNS2m/CNS2m_edge_table.csv": None,
+        "data/CNS2m/CNS2m_edge_info.csv": None,
+    },
     retry_if_failed=5,
     env="NEUROME_DATA_DIR",
 )
