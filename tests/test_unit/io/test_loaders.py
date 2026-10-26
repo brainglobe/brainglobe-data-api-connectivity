@@ -1,8 +1,7 @@
-import pooch
 import pytest
 
 from brainglobe_data_api_connectivity.io.loaders import (
-    gin_url,
+    GIN_REPO,
     load_data,
     load_test_data,
 )
@@ -14,7 +13,7 @@ def mock_cache(tmp_path, mocker):
 
     This prevents tests from affecting each other's cached files.
     """
-    mocker.patch.object(pooch, "os_cache", return_value=tmp_path)
+    mocker.patch.object(GIN_REPO, "path", tmp_path)
     return tmp_path
 
 
@@ -29,8 +28,7 @@ def test_load_refresh(mock_cache):
     """Check that refresh replaces a modified cached file."""
     load_test_data()
 
-    url = f"{gin_url()}test-data/small-nodes.csv"
-    cached_file = mock_cache / pooch.utils.unique_file_name(url)
+    cached_file = mock_cache / "test-data/small-nodes.csv"
     original_content = cached_file.read_text()
 
     # Modify the cached file.
