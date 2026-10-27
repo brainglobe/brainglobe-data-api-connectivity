@@ -17,12 +17,26 @@ class Sex(StrEnum):
     male = "m"
 
 
-def gin_url() -> str:
-    """Return the base URL for connectivity data hosted on GIN."""
-    return "https://gin.swc.ucl.ac.uk/brainglobe/data-api-connectivity/raw/master/"
+GIN_REPO = pooch.create(
+    path=pooch.os_cache("pooch"),
+    base_url="https://gin.swc.ucl.ac.uk/brainglobe/data-api-connectivity/raw/master/",
+    registry={
+        "test-data/small-nodes.csv": None,
+        "test-data/small-edge-table.csv": None,
+        "test-data/small-edge-meta.csv": None,
+        "data/CNS2f/CNS2f_node_info.csv": None,
+        "data/CNS2f/CNS2f_edge_table.csv": None,
+        "data/CNS2f/CNS2f_edge_info.csv": None,
+        "data/CNS2m/CNS2m_node_info.csv": None,
+        "data/CNS2m/CNS2m_edge_table.csv": None,
+        "data/CNS2m/CNS2m_edge_info.csv": None,
+    },
+    retry_if_failed=5,
+    env="NEUROME_DATA_DIR",
+)
 
 
-def _retrieve(url: str, refresh: bool = False) -> Path:
+def _retrieve(file_path: str, refresh: bool = False) -> Path:
     """Retrieve a file, optionally downloading a fresh copy.
 
 
@@ -32,47 +46,42 @@ def _retrieve(url: str, refresh: bool = False) -> Path:
 
 
     Args:
-        url: URL of the file to retrieve.
+        file_path: Relative path (inside GIN repo) of file to retrieve
+            e.g. test-data/small-nodes.csv
         refresh: If True, download a fresh copy instead of using the
             cached file. Defaults to False.
 
     Returns:
         Path to the downloaded or cached file.
     """
-    cache_path = Path(pooch.os_cache("pooch"))
-    filename = pooch.utils.unique_file_name(url)
-
     if refresh:
-        (cache_path / filename).unlink(missing_ok=True)
+        (GIN_REPO.abspath / file_path).unlink(missing_ok=True)
 
-    return Path(
-        pooch.retrieve(
-            url=url,
-            path=cache_path,
-            fname=filename,
-        )
-    )
+    return GIN_REPO.fetch(file_path)
 
 
 def load_test_data(refresh: bool = False) -> Connections:
     """Load the test connectivity dataset from GIN.
+
+    CSV files are downloaded to pooch's default cache directory, which can be
+    changed by setting the environment variable: NEUROME_DATA_DIR.
 
     Args:
         refresh: If True, download fresh copies instead of using cached files.
             Defaults to False.
     """
     path_node_info = _retrieve(
-        url=f"{gin_url()}test-data/small-nodes.csv",
+        file_path="test-data/small-nodes.csv",
         refresh=refresh,
     )
 
     path_edge_table = _retrieve(
-        url=f"{gin_url()}test-data/small-edge-table.csv",
+        file_path="test-data/small-edge-table.csv",
         refresh=refresh,
     )
 
     path_edge_info = _retrieve(
-        url=f"{gin_url()}test-data/small-edge-meta.csv",
+        file_path="test-data/small-edge-meta.csv",
         refresh=refresh,
     )
 
@@ -90,6 +99,9 @@ def load_data(sex: str = "f", refresh: bool = False) -> Connections:
     derived from the supplementary Excel datasets of Swanson et al. (2025).
     The CSV representation provides a more manageable format for working
     with the original large Excel datasets.
+
+    CSV files are downloaded to pooch's default cache directory, which can be
+    changed by setting the environment variable: NEUROME_DATA_DIR.
 
     Reference:
         Swanson, L. W., Hahn, J. D., & Sporns, O. (2025).
@@ -116,20 +128,20 @@ def load_data(sex: str = "f", refresh: bool = False) -> Connections:
         ) from None
 
     dataset = f"CNS2{sex_suffix}"
-    dataset_url = f"{gin_url()}data/{dataset}/{dataset}"
+    dataset_path = f"data/{dataset}/{dataset}"
 
     path_node_info = _retrieve(
-        url=f"{dataset_url}_node_info.csv",
+        file_path=f"{dataset_path}_node_info.csv",
         refresh=refresh,
     )
 
     path_edge_table = _retrieve(
-        url=f"{dataset_url}_edge_table.csv",
+        file_path=f"{dataset_path}_edge_table.csv",
         refresh=refresh,
     )
 
     path_edge_info = _retrieve(
-        url=f"{dataset_url}_edge_info.csv",
+        file_path=f"{dataset_path}_edge_info.csv",
         refresh=refresh,
     )
 
